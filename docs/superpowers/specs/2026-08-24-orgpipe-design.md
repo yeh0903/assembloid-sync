@@ -160,19 +160,46 @@ rather than stdout, so the runner confirms success by counting output files, not
 parsing console text.
 
 The recorder-syntax `run("Image Sequence... ")` writer throws `IndexOutOfBoundsException`
-under automation regardless of mode. The macro uses a per-slice loop instead:
+under automation regardless of mode. The macro uses a per-slice loop instead
+(`setSlice → Duplicate → setMinAndMax → saveAs("Tiff") → close`), naming frames
+`prefix + IJ.pad(i-1, 4) + ".tif"` — identical to the manual Image Sequence output.
+
+### Note: the B&C "Auto" button is not `Enhance Contrast`
+
+The obvious macro command, `run("Enhance Contrast", "saturated=0.35")`, produces a
+*different* display range than the manual workflow's B&C Auto button — `(100.76, 838.25)`
+vs the `(149.93, 887.42)` recorded in every hand-made frame. They are different algorithms:
+Auto is `ContrastAdjuster.autoAdjust` (256-bin histogram of the current slice, threshold =
+pixels/5000, bins above pixels/10 ignored), Enhance Contrast is percentile saturation.
+
+The macro therefore implements `autoAdjust` directly:
 
 ```javascript
-run("Enhance Contrast", "saturated=" + saturated);
-getMinAndMax(dmin, dmax);
-for (i = 1; i <= nSlices; i++) {
-    setSlice(i); run("Duplicate...", "title=__frm"); setMinAndMax(dmin, dmax);
-    saveAs("Tiff", outdir + "/" + prefix + IJ.pad(i-1, 4) + ".tif"); close();
-}
+getRawStatistics(nPixels, mean, dmin, dmax);
+getHistogram(values, counts, 256);
+limit = nPixels / 10;  threshold = nPixels / 5000;
+i = -1; found = false;
+do { i++; c = counts[i]; if (c > limit) c = 0; found = c > threshold; } while (!found && i < 255);
+hmin = i;
+i = 256; found = false;
+do { i--; c = counts[i]; if (c > limit) c = 0; found = c > threshold; } while (!found && i > 0);
+hmax = i;
+binSize = (dmax - dmin) / 256;
+setMinAndMax(dmin + hmin * binSize, dmin + hmax * binSize);
 ```
 
-Auto B&C sets one display range for the whole stack — verified identical across frames
-0, 1, 50, 2700 and 5399 of the existing manual output.
+**Verified against the manual output:** on slice 1 of the real `250514_B2_000` data this
+yields `hmin=1, hmax=16` → `(149.92518941, 887.41902018)` vs the manual files'
+`(149.92518616, 887.41900635)` — agreement to 7 significant figures (residual is
+float32-vs-float64 statistics arithmetic; the manual run read the float64 file). The
+manual values sit exactly on histogram bins 1 and 16, confirming the algorithm, and the
+range is constant across all 5400 manual frames (checked 0, 1, 50, 2700, 5399), confirming
+Auto was pressed once on slice 1 — which is what the macro reproduces.
+
+`fiji.mode` selects `"auto_bc"` (default — replicates the manual workflow) or
+`"saturated"` (Enhance Contrast with the `saturated` parameter) for cases where a
+different stretch is wanted. Either way the adjustment is display metadata only; pixels
+are untouched.
 
 ## Stage contract
 
@@ -214,7 +241,8 @@ defensive one at the top of cell 2 that kills a *previous* run's cluster.
 ### stage_fiji (any env)
 
 Generates the macro, invokes `ImageJ-win64.exe -macro`, verifies the output frame count
-matches the source stack depth. `saturated` defaults to `0.35`.
+matches the source stack depth. Defaults to `mode="auto_bc"`, the exact replication of the
+manual B&C Auto button (see the Fiji note above).
 
 ### stage_suite2p (suite2p env)
 
@@ -232,17 +260,42 @@ gui2p.run(r"<ds>\caiman\suite2p\plane0\stat.npy")
 
 ### stage_roi (code env)
 
-Loads `F/Fneu/iscell/stat`, GMM + Mahalanobis organoid split, ΔF/F z-scoring, amplitude
-and latency filtering, correlation heatmap, and the inter-organoid synchronization index.
+Reproduces the reference notebook's flow (`250514_B2_000/ROI_analysis.ipynb`, the version
+the user pointed to as "what I prefer"):
 
-`sample_size` is derived as `min(len(good_idx[0]), len(good_idx[1]))` rather than being a
-hand-set constant.
+1. Load `F/Fneu/iscell/stat`, filter to `iscell`
+2. GMM + Mahalanobis split into two organoids (`n_init=10, random_state=0`)
+3. Neuropil correction, F₀ baseline, z-scored ΔF/F
+4. Amplitude filter (P98−P02 ≥ `amp_min_z`), first-burst latency ordering
+5. Full-population correlation matrix over `good_idx[0] + good_idx[1]`
+6. Subsampled correlation matrix: `sample_size = min(len(good_idx[0]), len(good_idx[1]))`
+   per organoid, drawn with `default_rng(seed=0)` — derived, not hand-set; the smaller
+   organoid contributes all of its ROIs
+7. **SCA network synchronicity** — `calculate_synchronicity_index` on the subsampled
+   correlation matrix and traces, exactly as the reference notebook invokes it:
+   `n_surrogates=200, min_cluster_size=3, significance_threshold=2.0` → corrSYN
+8. **IOSI** — `calculate_inter_organoid_index(dFz[good_idx[0]], dFz[good_idx[1]],
+   n_surrogates=200)`, with the cross-correlation vectorized (see below)
+
+Outputs, written to the dataset folder:
+
+| file | content |
+|---|---|
+| `assembloid_demo.jpg` | GMM split sanity scatter |
+| `correlation.tif` | subsampled heatmap, dpi=1500 (as the notebook saves it) |
+| `roi_results.json` | ROI counts per organoid, corrSYN, SCA cluster stats, IOSI, IOSI_mean, z-scores, p-value, significance |
+| `corr_full.npy`, `corr_sampled.npy` | the two correlation matrices as data |
+
+The console prints the summary block — corrSYN, IOSI, z-score, significant yes/no — so
+`orgpipe analyze` ends with the numbers on screen, not just in files.
 
 `calculate_inter_organoid_index` currently computes cross-correlation with a Python double
 loop — `M_A × M_B` calls to `np.corrcoef`, repeated for every surrogate. At
 `n_surrogates=200` that is millions of calls and dominates the 25-minute stage. Since
 z-scored rows make Pearson r a normalized dot product, it becomes `A_z @ B_z.T / T` —
-identical result, minutes to well under a second.
+identical result, minutes to well under a second. The AAFT surrogate generation itself is
+kept verbatim (it uses `np.random.randn` unseeded, exactly as the notebook does — so
+surrogate-derived z-scores vary slightly between runs in both manual and automated paths).
 
 The propagation/raster cells (15–18 in the 20-cell notebook vintage) are not carried over;
 they are not part of the correlation/synchronicity output.
@@ -254,16 +307,30 @@ deltas for that dataset. Missing file means all defaults.
 
 ```json
 {
+  "data_root": "Z:\\Joseph",
   "frame_rate": null,
   "denoise": { "decay_time": 2.0, "gSig": [5, 5], "rf": 20, "stride": 6, "K": 5,
                "p": 2, "nb": 2, "merge_thr": 0.80, "min_SNR": 2.0, "rval_thr": 0.80,
-               "chunk_size": 200 },
-  "fiji":    { "saturated": 0.35 },
+               "use_cnn": true, "cnn_thr": 0.90, "min_fitness_raw": -60,
+               "ring_size_factor": 1.4, "method_init": "greedy_roi",
+               "ssub": 1, "tsub": 1, "chunk_size": 200 },
+  "fiji":    { "mode": "auto_bc", "saturated": 0.35 },
   "suite2p": { "ops_file": "settings/suite2p_ops.npy" },
-  "roi":     { "neuropil_r": 0.7, "baseline_pctl": 8, "amp_min_z": 3.5,
-               "burst_z": 3.5, "min_gap_fr": 3, "n_surrogates": 200 }
+  "roi":     { "neuropil_r": 0.4, "baseline_pctl": 8, "amp_min_z": 3.75,
+               "burst_z": 2.5, "min_gap_fr": 3, "n_surrogates": 200 }
 }
 ```
+
+The `denoise` section carries the notebook's `params_dict` **verbatim and completely** —
+every key, including ones like `min_fitness_raw` whose effect is uncertain — because
+fidelity means handing `CNMFParams` the same dict, not a curated subset.
+
+The `roi` defaults are the **reference notebook's** values (`250514_B2_000`:
+`NEUROPIL_R=0.4, AMP_MIN_Z=3.75, BURST_Z=2.5`), which also match `250521_B2_001`. The
+B3/C3 notebook vintage used `0.7 / 3.5 / 3.5` instead — relevant only if those defaults
+are reused outside the B2 datasets, and overridable per dataset either way. Tuning against
+the amplitude distribution stays in the notebook, whose histogram cell exists for exactly
+that; a chosen value is then pinned in that dataset's `orgpipe.json`.
 
 `frame_rate: null` means "read `LSM/@frameRate` from `Experiment.xml`". A number overrides
 it. The resolved value feeds both caiman `fr` and suite2p `fs`, so the two cannot drift
@@ -287,22 +354,43 @@ there. On the existing `250514_B2_000` run that reads 07:28:02 vs 07:22:16 — u
 `orgpipe analyze` refuses to run on a dataset still in `awaiting_curation` unless
 overridden, so uncurated output cannot silently become a result.
 
+Two supporting commands: `orgpipe curate <ds>` reopens the suite2p GUI on a dataset's
+`stat.npy` at any time (curation happened but more is wanted, or the GUI was closed by
+accident). `orgpipe run --all --no-gui` suppresses the GUI launch for batch runs — without
+it, a multi-dataset run would block on a human between datasets; with it, all datasets
+land in `awaiting_curation` and are curated afterwards one at a time.
+
+The orchestrator itself (`bin/pipeline.py`) imports only tier-1 modules, so it runs under
+any Python ≥3.9 — the `orgpipe.bat` wrapper uses the base Anaconda interpreter and never
+activates an env itself; envs are entered per stage via `conda run`.
+
 ## Fidelity
 
 The automated pipeline must produce the same result as the manual one. That is enforced by
 four equivalence tests, not by assertion.
 
-1. **Fiji split.** Automated output vs the existing hand-made `250514_B2_000/caiman/*.tif`,
-   byte-compared. Already passing on a 20-frame slice of the real data in both GUI and
-   headless modes: `pixels_identical_to_manual=True`, dtype float32. Phase 0 runs it over
-   the full 5400.
+Scope of the claim: every component this project *changes* is tested for exact equivalence.
+The components it does not change — CNMF-E fitting, suite2p's `run_s2p` — are invoked
+through the identical API with identical parameters, so any run-to-run variation there is
+a property of those tools, present equally between two manual runs.
 
-2. **Denoise save path.** Chunked float32 writer vs the existing float64 file, compared
-   frame by frame. Establishes that chunking and the dtype pin change nothing.
+1. **Fiji split.** Automated output vs the existing hand-made `250514_B2_000/caiman/*.tif`:
+   pixels compared exactly, display range compared to float32 precision. Pixel identity
+   already passing on a 20-frame slice of the real data (`pixels_identical_to_manual=True`,
+   dtype float32); display-range agreement verified to 7 significant figures via the
+   `auto_bc` macro. Phase 0 runs the pixel check over the full 5400.
+
+2. **Denoise save path.** Old cell-4 logic and the new chunked float32 writer, fed the
+   *same* estimates object (from a smoke-run `cnm`), outputs compared frame by frame.
+   This isolates what actually changed — the writer — from the fit. Structurally the
+   chunked result is column-exact: each output frame depends only on its own column of
+   `C`/`f`, so chunking cannot change values. The existing full-run float64 file provides
+   the dtype half of the argument: its values are exactly float32-representable
+   (max abs diff 0.0 against the float32 frames), so the upcast carried no information.
 
 3. **suite2p ops.** The dict the runner builds, diffed key-by-key against
    `settings_ver1.0.npy`. The only permitted differences are `data_path`, `save_path0`,
-   and anything explicitly configured. Printed at run time. This is the right test because
+   `fs` (per the frame-rate decision), and anything explicitly configured. Printed at run time. This is the right test because
    the automation does not change *how* suite2p runs — both paths call `run_s2p` — only
    which dict reaches it. Comparing dicts is exact and costs seconds; re-running suite2p
    to compare `F.npy` costs 4.7 hours and proves less.
@@ -347,9 +435,14 @@ non-B3 datasets. **Recorded as an open decision below.**
 
 ## Error handling
 
-Preflight before committing to any multi-hour stage: raw TIFF readable, `Experiment.xml`
-parses, ≥14 GB free (5.7 denoised + 5.4 sequence + 2.8 binary), ops file present, Fiji
-binary present, target conda env resolves.
+Preflight before committing to any multi-hour stage: raw TIFF readable and dimensions
+logged, `Experiment.xml` parses, ≥20 GB free on the dataset drive (5.7 caiman memmap in
+`.orgpipe/caiman_temp` + 5.7 denoised + 5.4 sequence + 2.8 binary), ops file present,
+Fiji binary present, target conda env resolves.
+
+After a successful denoise, the per-dataset `caiman_temp` contents are deleted (the
+memmap is a pure intermediate; `keep_temp: true` in `orgpipe.json` preserves it for
+debugging), reclaiming 5.7 GB per dataset.
 
 Each stage catches, records `failed` plus traceback to state, exits nonzero. The
 orchestrator advances to the next dataset under `--keep-going`, otherwise stops. Because
@@ -380,10 +473,14 @@ it.
 
 ## Open decisions
 
-1. **Frame rate.** Adopt the true rate (~29.16 Hz) for both `fr` and `fs`, accepting a
-   different ROI set than the nine completed non-B3 datasets? Or keep `fs = 15.0` verbatim
-   for comparability? A third option sets `fs` correctly and `tau = 1.0` to preserve the
-   ~1-second detection bin.
+1. **Detection bin width (`tau`).** The frame rate itself is decided: the user chose to
+   trust `Experiment.xml` (~29.16 Hz) for both `fr` and `fs`; the `fr=15` notebooks and
+   `fs=15.0` in the ops file are treated as copy-paste errors. What remains open is `tau`.
+   With the corrected `fs`, `tau=2.0` gives a ~58-frame (~2 s) detection bin, versus the
+   ~30-frame (~1 s) bin the old accidental `fs=15` produced — and the 1 s bin is plausibly
+   better for burst detection. Setting `tau=1.0` restores it. Since `spks.npy` (the only
+   other consumer of `tau`) is loaded but never used downstream, `tau`'s sole live effect
+   here is this bin width, making `tau=1.0` low-risk. Default pending user choice.
 
 2. **Notebook location.** The two notebooks take `DATASET = r"Z:\Joseph\250528_B2_003"` in
    the first cell and live once in the repo rather than being copied into each folder.
