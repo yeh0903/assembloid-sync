@@ -482,9 +482,13 @@ No speedup figure is promised. The 4h40m is dominated by Cellpose on CPU, but th
 detect-versus-extract split has not been measured, and Phase 0's first task is to measure
 it.
 
-## Open decisions
+## Notebooks — decided
 
-1. **Notebook location.** The two notebooks take `DATASET = r"Z:\Joseph\250528_B2_003"` in
-   the first cell and live once in the repo rather than being copied into each folder.
-   This is what stops the five-vintage drift from recurring, but it does change how they
-   are opened.
+The two notebooks live once, in `notebooks/`, and take
+`DATASET = r"Z:\Joseph\250528_B2_003"` in their first cell rather than being copied into
+each dataset folder. This is what stops the five-vintage drift from recurring. They import
+from `orgpipe` for the shared logic and exist to produce figures interactively; batch runs
+never execute them. Per-dataset tuned parameters are pinned in that dataset's
+`orgpipe.json`, which the notebook reads the same way the stages do.
+
+No decisions remain open.
