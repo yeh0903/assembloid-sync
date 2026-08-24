@@ -309,21 +309,23 @@ deltas for that dataset. Missing file means all defaults.
 {
   "data_root": "Z:\\Joseph",
   "frame_rate": null,
-  "denoise": { "decay_time": 2.0, "gSig": [5, 5], "rf": 20, "stride": 6, "K": 5,
+  "denoise": { "decay_time": 1.0, "gSig": [5, 5], "rf": 20, "stride": 6, "K": 5,
                "p": 2, "nb": 2, "merge_thr": 0.80, "min_SNR": 2.0, "rval_thr": 0.80,
                "use_cnn": true, "cnn_thr": 0.90, "min_fitness_raw": -60,
                "ring_size_factor": 1.4, "method_init": "greedy_roi",
                "ssub": 1, "tsub": 1, "chunk_size": 200 },
   "fiji":    { "mode": "auto_bc", "saturated": 0.35 },
-  "suite2p": { "ops_file": "settings/suite2p_ops.npy" },
+  "suite2p": { "ops_file": "settings/suite2p_ops.npy", "tau": 1.0 },
   "roi":     { "neuropil_r": 0.4, "baseline_pctl": 8, "amp_min_z": 3.75,
                "burst_z": 2.5, "min_gap_fr": 3, "n_surrogates": 200 }
 }
 ```
 
-The `denoise` section carries the notebook's `params_dict` **verbatim and completely** —
-every key, including ones like `min_fitness_raw` whose effect is uncertain — because
-fidelity means handing `CNMFParams` the same dict, not a curated subset.
+The `denoise` section carries the notebook's `params_dict` **completely** — every key,
+including ones like `min_fitness_raw` whose effect is uncertain — and verbatim except for
+the two decided divergences (`fr` from `Experiment.xml`, `decay_time = 1.0`; see
+"Deliberate divergences" below). Fidelity means handing `CNMFParams` the same dict, not a
+curated subset.
 
 The `roi` defaults are the **reference notebook's** values (`250514_B2_000`:
 `NEUROPIL_R=0.4, AMP_MIN_Z=3.75, BURST_Z=2.5`), which also match `250521_B2_001`. The
@@ -390,7 +392,7 @@ a property of those tools, present equally between two manual runs.
 
 3. **suite2p ops.** The dict the runner builds, diffed key-by-key against
    `settings_ver1.0.npy`. The only permitted differences are `data_path`, `save_path0`,
-   `fs` (per the frame-rate decision), and anything explicitly configured. Printed at run time. This is the right test because
+   `fs` and `tau` (per the decided divergences), and anything explicitly configured. Printed at run time. This is the right test because
    the automation does not change *how* suite2p runs — both paths call `run_s2p` — only
    which dict reaches it. Comparing dicts is exact and costs seconds; re-running suite2p
    to compare `F.npy` costs 4.7 hours and proves less.
@@ -401,37 +403,46 @@ a property of those tools, present equally between two manual runs.
 A `--smoke` mode truncates to the first 300 frames so the whole chain runs in minutes
 instead of hours. Without it, development is limited to roughly one attempt per workday.
 
-## The one deliberate divergence — needs sign-off
+## Deliberate divergences from the manual configuration — decided
 
-`settings_ver1.0.npy` has `fs = 15.0`. The true acquisition rate is ~29–30 Hz for every
-dataset: `Experiment.xml` reports `frameRate="29.160"` with `averageMode="0"`, meaning
-frame averaging is **off** and `averageNum="5"` is a dead setting. The notebooks disagree
-with themselves — 21 use `fr=15`, 18 use `fr=30`, and folders with identical acquisition
-settings pick different values (`250605_B3_000`→15, `250618_B3_005`→30, both 29.160 Hz).
+Two parameters intentionally differ from the historical files. Both were decided by the
+user with evidence on the table; everything else is carried verbatim.
 
-Setting `frame_rate` to the true rate is correct but **is not** result-preserving:
+### 1. Frame rate: `fs`/`fr` = `Experiment.xml`'s `LSM/@frameRate` (~29.16 Hz), not 15/30
 
-```
-detection/detect.py:21
-bin_size = int(max(1, ops["nframes"] // ops["nbinned"], np.round(ops["tau"] * ops["fs"])))
-```
+The true acquisition rate is ~29–30 Hz for every dataset: `averageMode="0"` means frame
+averaging is **off**, so `averageNum` is a dead setting and the XML rate is real. The
+historical values disagree with it and with themselves — `settings_ver1.0.npy` has
+`fs = 15.0`, 21 notebooks use `fr=15`, 18 use `fr=30`, and folders with identical
+acquisition settings pick different values (`250605_B3_000`→15, `250618_B3_005`→30, both
+29.160 Hz). **Decision: trust the XML**; the 15s are copy-paste errors. Resolved per
+dataset at run time, feeding caiman `fr` and suite2p `fs` from one source so they can
+never drift apart again.
 
-With `tau=2.0`, `nframes=5400`, `nbinned=5000`: `fs=15` → bin_size **30**; `fs=29.16` →
-bin_size **58**. Because `anatomical_only=4` segments the max projection of that binned
-movie with Cellpose, doubling the bin halves the temporal resolution going in (180 binned
-frames → 93) and Cellpose returns a different ROI set. On the caiman side `fr` scales
-`decay_time` into frames for the CNMF-E temporal model, so the denoised movie changes too.
+### 2. Transient timescale: `tau = 1.0` (suite2p) and `decay_time = 1.0` (caiman), not 2.0
 
-Worth noting the accident: `fs=15` yields a ~1-second detection bin at the true 30 Hz
-rate, which is plausibly *better* for burst detection than the ~2-second bin the corrected
-value produces. There is no ops knob to push `bin_size` below `tau * fs`, so keeping the
-finer bin alongside a correct `fs` requires lowering `tau` to 1.0 — which decouples "what
-rate was this recorded at" from "how finely do I bin for segmentation" instead of having
-one constant quietly serve both.
+`tau`'s only live effect in this pipeline is the detection bin,
+`bin_size = round(tau × fs)` (`detection/detect.py:21`), because `spks.npy` — the other
+consumer — is loaded but never used. Historically `tau=2.0 × fs=15` gave a 30-frame bin:
+two compensating errors landing on ~1.0 s of real time. Correcting `fs` alone would
+silently double the bin to 58 frames and change the ROI set Cellpose returns
+(`anatomical_only=4` segments the binned movie's max projection).
+
+Measured from the data — exponential fits to 1,555 isolated transient decays across three
+cohorts (`250514_B2_000`: τ=0.49 s, `250924_C3_002`: 0.57 s, `250110_Y2L_002`: 0.56 s;
+IQRs ~0.3–0.9 s) — the indicator decays in **~0.5–0.6 s**, four times faster than the 2.0
+in the config (whose source appears to be an erroneous notebook comment calling GCaMP8s
+"slow, ~1.5–2.2s"; the jGCaMP8 series is sub-second, in agreement with the measurement).
+
+**Decision: `tau = 1.0`.** With corrected `fs` this yields a 29-frame bin — reproducing
+the historical 30-frame bin behind every curated dataset to within one frame, and sitting
+at ~2× measured τ, where a detection bin should be. `decay_time = 1.0` mirrors it on the
+caiman side: an SNR evaluation window of ~29 frames (~1 s ≈ transient duration), matching
+what the 21-folder `fr=15` majority cohort effectively ran.
 
 The four in-scope datasets have no prior manual run, so there is no prior result to
-diverge *from*. This matters only for comparability against the nine already-complete
-non-B3 datasets. **Recorded as an open decision below.**
+diverge from; these choices only affect comparability against the nine already-complete
+non-B3 datasets, which is accepted.
 
 ## Error handling
 
@@ -473,16 +484,7 @@ it.
 
 ## Open decisions
 
-1. **Detection bin width (`tau`).** The frame rate itself is decided: the user chose to
-   trust `Experiment.xml` (~29.16 Hz) for both `fr` and `fs`; the `fr=15` notebooks and
-   `fs=15.0` in the ops file are treated as copy-paste errors. What remains open is `tau`.
-   With the corrected `fs`, `tau=2.0` gives a ~58-frame (~2 s) detection bin, versus the
-   ~30-frame (~1 s) bin the old accidental `fs=15` produced — and the 1 s bin is plausibly
-   better for burst detection. Setting `tau=1.0` restores it. Since `spks.npy` (the only
-   other consumer of `tau`) is loaded but never used downstream, `tau`'s sole live effect
-   here is this bin width, making `tau=1.0` low-risk. Default pending user choice.
-
-2. **Notebook location.** The two notebooks take `DATASET = r"Z:\Joseph\250528_B2_003"` in
+1. **Notebook location.** The two notebooks take `DATASET = r"Z:\Joseph\250528_B2_003"` in
    the first cell and live once in the repo rather than being copied into each folder.
    This is what stops the five-vintage drift from recurring, but it does change how they
    are opened.
