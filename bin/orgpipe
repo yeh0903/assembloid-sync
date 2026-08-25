@@ -1,0 +1,3 @@
+#!/bin/sh
+# orgpipe (Git Bash)
+"C:/ProgramData/anaconda3/python.exe" "Z:/Joseph/orgpipe/bin/pipeline.py" "$@"
