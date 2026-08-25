@@ -95,6 +95,9 @@ def cmd_analyze(args, cfg0):
     failures = []
     for ds in _targets(args, cfg0):
         cfg = config.load_config(ds)
+        if layout.is_b3(ds):
+            print("SKIP (B3):", ds.name)
+            continue
         if not state.is_done(ds, "suite2p", smoke=True) and not (layout.plane0(ds) / "F.npy").exists():
             print("SKIP (no suite2p output):", ds.name)
             continue
@@ -118,6 +121,9 @@ def cmd_analyze(args, cfg0):
 def cmd_curate(args, cfg0):
     ds = config.resolve_dataset(args.dataset, cfg0)
     cfg = config.load_config(ds)
+    if layout.is_b3(ds):
+        print("REFUSING: %s is a B3 dataset (out of scope)" % ds)
+        sys.exit(2)
     subprocess.run(["conda", "run", "--no-capture-output", "-n",
                     cfg["envs"]["suite2p"], "python",
                     str(BIN / "run_suite2p.py"), "--gui", str(ds)])
