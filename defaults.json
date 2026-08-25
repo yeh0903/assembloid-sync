@@ -2,7 +2,7 @@
   "data_root": "Z:\\Joseph",
   "frame_rate": null,
   "keep_temp": false,
-  "envs": { "caiman": "caiman_env", "suite2p": "suite2p", "code": "code" },
+  "envs": { "caiman": "caiman_env", "suite2p": "suite2p_gpu", "code": "code" },
   "denoise": { "decay_time": 1.0, "gSig": [5, 5], "rf": 20, "stride": 6, "K": 5,
                "p": 2, "nb": 2, "merge_thr": 0.80, "min_SNR": 2.0, "rval_thr": 0.80,
                "use_cnn": true, "cnn_thr": 0.90, "min_fitness_raw": -60,
