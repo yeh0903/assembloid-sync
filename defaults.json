@@ -1,0 +1,17 @@
+{
+  "data_root": "Z:\\Joseph",
+  "frame_rate": null,
+  "keep_temp": false,
+  "envs": { "caiman": "caiman_env", "suite2p": "suite2p", "code": "code" },
+  "denoise": { "decay_time": 1.0, "gSig": [5, 5], "rf": 20, "stride": 6, "K": 5,
+               "p": 2, "nb": 2, "merge_thr": 0.80, "min_SNR": 2.0, "rval_thr": 0.80,
+               "use_cnn": true, "cnn_thr": 0.90, "min_fitness_raw": -60,
+               "ring_size_factor": 1.4, "method_init": "greedy_roi",
+               "ssub": 1, "tsub": 1, "chunk_size": 200 },
+  "fiji": { "mode": "auto_bc", "saturated": 0.35,
+            "imagej_exe": "C:\\Program Files\\fiji-win64\\Fiji.app\\ImageJ-win64.exe" },
+  "suite2p": { "ops_file": "settings/suite2p_ops.npy", "tau": 1.0, "ops_overrides": {} },
+  "roi": { "neuropil_r": 0.4, "baseline_pctl": 8, "amp_min_z": 3.75, "burst_z": 2.5,
+           "min_gap_fr": 3, "n_surrogates": 200, "sca_min_cluster_size": 3,
+           "sca_significance_threshold": 2.0, "seed": 0 }
+}
