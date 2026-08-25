@@ -59,6 +59,7 @@ def select_good(dfz, roi, amp_min_z, burst_z, min_gap_fr):
         above = np.where(dfz[r] > burst_z)[0]
         if above.size:
             first = above[0]
+            # NOTE: this inner loop is dead by design (breaks without effect) - ported verbatim from the notebook; do not "fix" (changes nothing, but parity is pinned by test)
             for j in above[1:]:
                 if j - first > min_gap_fr:
                     break
@@ -131,6 +132,9 @@ def run(ds, cfg, smoke=False):
         "sample_size": int(sample_size),
         "sca": _jsonable(sca), "iosi": _jsonable(iosi),
     }
+    for k in ("cluster_sizes", "SI"):
+        if k in sca and hasattr(sca[k], "tolist"):
+            results["sca"][k] = sca[k].tolist()
     (ds / "roi_results.json").write_text(json.dumps(results, indent=2),
                                          encoding="utf-8")
     print("\n[roi] corrSYN = %.4f   IOSI = %.4f (z=%.2f, %s)"
