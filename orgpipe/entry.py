@@ -28,6 +28,9 @@ def main(stage_name, run_fn):
     if layout.is_b3(ds):
         print("REFUSING: %s is a B3 dataset (out of scope)" % ds)
         sys.exit(2)
+    if not ds.is_dir():
+        print("ERROR: dataset folder does not exist: %s" % ds)
+        sys.exit(2)
     if not args.force and state.is_done(ds, stage_name, smoke=args.smoke):
         print("[%s] already done for %s - skipping (--force to redo)" % (stage_name, ds.name))
         sys.exit(0)
