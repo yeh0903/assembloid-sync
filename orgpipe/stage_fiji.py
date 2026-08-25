@@ -15,7 +15,7 @@ def _fwd(p):
     return str(Path(p)).replace("\\", "/")
 
 
-def split(src, outdir, prefix, cfg, timeout_s=3600, poll_s=2.0):
+def split(src, outdir, prefix, cfg, timeout_s=None, poll_s=2.0):
     """Core splitter, targetable at any output dir (used by tools/verify_fiji.py).
 
     ImageJ's exit path is unreliable after a Bio-Formats import (the JVM can
@@ -28,25 +28,32 @@ def split(src, outdir, prefix, cfg, timeout_s=3600, poll_s=2.0):
     sentinel = outdir / "DONE_SENTINEL.txt"
     if sentinel.exists():
         sentinel.unlink()
+    for stale in outdir.glob(prefix + "*.tif"):
+        stale.unlink()
     with tifffile.TiffFile(str(src)) as t:
         n_src = len(t.pages)
+    if timeout_s is None:
+        timeout_s = 60 + 0.5 * n_src
     macro = config.REPO_ROOT / "macros" / "split_sequence.ijm"
     arg = "|".join([_fwd(src), _fwd(outdir), prefix,
                     cfg["fiji"]["mode"], str(cfg["fiji"]["saturated"])])
     proc = subprocess.Popen([cfg["fiji"]["imagej_exe"], "-macro", str(macro), arg])
     try:
-        waited = 0.0
+        deadline = time.monotonic() + timeout_s
         while not sentinel.exists():
             if proc.poll() is not None:
                 break  # exited on its own; sentinel checked below
-            if waited >= timeout_s:
+            if time.monotonic() >= deadline:
                 raise RuntimeError("Fiji timed out after %ds (%s)" % (timeout_s, src))
             time.sleep(poll_s)
-            waited += poll_s
     finally:
         if proc.poll() is None:
             subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
                            capture_output=True)
+            try:
+                proc.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                pass
     if not sentinel.exists():
         raise RuntimeError("Fiji ended without writing the completion sentinel (%s)" % src)
     sentinel.unlink()
