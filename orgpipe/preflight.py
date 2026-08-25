@@ -10,6 +10,8 @@ MIN_FREE_BYTES = 20 * 1024 ** 3  # memmap 5.7 + denoised 5.7 + sequence 5.4 + bi
 
 
 def check(ds, cfg, needs_space=True):
+    if not Path(ds).is_dir():
+        return ["dataset folder does not exist: %s" % ds]
     errs = []
     if not layout.raw_tif(ds).exists():
         errs.append("missing raw tif: %s" % layout.raw_tif(ds))

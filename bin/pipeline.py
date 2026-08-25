@@ -13,6 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from orgpipe import config, layout, preflight, state
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 BIN = Path(__file__).resolve().parent
 
 
@@ -30,10 +33,10 @@ def _tee(cmd, log_path):
 
 def _stage(ds, cfg, stage, script, env, extra):
     if env == "base":
-        cmd = [sys.executable, str(BIN / script), str(ds)] + extra
+        cmd = [sys.executable, "-u", str(BIN / script), str(ds)] + extra
     else:
         cmd = ["conda", "run", "--no-capture-output", "-n", env,
-               "python", str(BIN / script), str(ds)] + extra
+               "python", "-u", str(BIN / script), str(ds)] + extra
     print("\n=== [%s] %s (%s) ===" % (stage, ds.name, env))
     rc = _tee(cmd, layout.logs_dir(ds) / (stage + ".log"))
     if rc != 0:
@@ -46,7 +49,7 @@ def _targets(args, cfg0):
         root = Path(cfg0["data_root"])
         return [p for p in sorted(root.iterdir())
                 if p.is_dir()
-                and p.name[:2] in ("24", "25")
+                and p.name[:2].isdigit()
                 and not layout.is_b3(p)
                 and layout.raw_tif(p).exists()]
     return [config.resolve_dataset(args.dataset, cfg0)]
@@ -59,7 +62,7 @@ def cmd_run(args, cfg0):
         if layout.is_b3(ds):
             print("SKIP (B3):", ds.name)
             continue
-        errs = preflight.check(ds, cfg, needs_space=not state.is_done(ds, "suite2p", args.smoke))
+        errs = preflight.check(ds, cfg, needs_space=args.force or not state.is_done(ds, "suite2p", args.smoke))
         for env in {cfg["envs"]["caiman"], cfg["envs"]["suite2p"]}:
             e = preflight.check_env(env)
             if e:
@@ -81,11 +84,13 @@ def cmd_run(args, cfg0):
             if args.keep_going:
                 continue
             sys.exit(1)
-        if not args.no_gui and not args.all:
+        if not args.no_gui and not args.all and not args.smoke:
             print("\nOpening suite2p GUI - curate cells, save, close. Then: orgpipe analyze %s" % ds.name)
-            subprocess.run(["conda", "run", "--no-capture-output", "-n",
-                            cfg["envs"]["suite2p"], "python",
-                            str(BIN / "run_suite2p.py"), "--gui", str(ds)])
+            rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
+                                 cfg["envs"]["suite2p"], "python",
+                                 str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
+            if rc != 0:
+                print("suite2p GUI failed to launch (exit %d) - check the suite2p env" % rc)
     if failures:
         print("\nFAILED datasets:", ", ".join(failures))
         sys.exit(1)
@@ -106,7 +111,8 @@ def cmd_analyze(args, cfg0):
                   "(orgpipe curate %s) or pass --assume-curated." % (ds.name, ds.name))
             failures.append(ds.name)
             continue
-        extra = ["--force"] if args.force else []
+        s2p_smoke = state.read_state(ds)["stages"].get("suite2p", {}).get("smoke", False)
+        extra = (["--smoke"] if s2p_smoke else []) + (["--force"] if args.force else [])
         try:
             _stage(ds, cfg, "roi", "run_roi.py", cfg["envs"]["code"], extra)
         except RuntimeError as e:
@@ -124,9 +130,11 @@ def cmd_curate(args, cfg0):
     if layout.is_b3(ds):
         print("REFUSING: %s is a B3 dataset (out of scope)" % ds)
         sys.exit(2)
-    subprocess.run(["conda", "run", "--no-capture-output", "-n",
-                    cfg["envs"]["suite2p"], "python",
-                    str(BIN / "run_suite2p.py"), "--gui", str(ds)])
+    rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
+                         cfg["envs"]["suite2p"], "python",
+                         str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
+    if rc != 0:
+        print("suite2p GUI failed to launch (exit %d) - check the suite2p env" % rc)
 
 
 def cmd_status(args, cfg0):
