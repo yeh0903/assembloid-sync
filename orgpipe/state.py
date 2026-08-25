@@ -1,6 +1,7 @@
 """Per-dataset stage state in <dataset>/.orgpipe/state.json. Tier 1: stdlib only."""
 import datetime
 import json
+import os
 
 from . import layout
 
@@ -9,12 +10,21 @@ def read_state(ds):
     p = layout.state_path(ds)
     if not p.exists():
         return {"stages": {}}
-    return json.loads(p.read_text(encoding="utf-8"))
+    try:
+        st = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        print("WARNING: could not read state file %s (%s) - starting fresh" % (p, e))
+        return {"stages": {}}
+    st.setdefault("stages", {})
+    return st
 
 
 def write_state(ds, st):
     layout.orgpipe_dir(ds).mkdir(parents=True, exist_ok=True)
-    layout.state_path(ds).write_text(json.dumps(st, indent=2), encoding="utf-8")
+    p = layout.state_path(ds)
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(st, indent=2), encoding="utf-8")
+    os.replace(str(tmp), str(p))
 
 
 def mark(ds, stage, status, smoke=False, error=None):
