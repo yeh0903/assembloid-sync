@@ -21,7 +21,7 @@ print("frame rate:", config.resolve_frame_rate(ds, cfg))"""
 
 def nb(cells, path):
     n = nbf.v4.new_notebook()
-    n.cells = [nbf.v4.new_code_cell(c) for c in cells]
+    n.cells = [nbf.v4.new_code_cell(c, id="cell-%d" % i) for i, c in enumerate(cells)]
     nbf.write(n, str(path))
     print("wrote", path)
 
@@ -65,7 +65,7 @@ plots.gmm_scatter(xy, labels, str(ds / "assembloid_demo.jpg"))
 print({0: idx[0].size, 1: idx[1].size})""",
     """\
 # --- dF/F z-scores + TUNING: look at these histograms, then set amp_min_z /
-# burst_z in <dataset>/orgpipe.json and reload cfg ---
+# burst_z in <dataset>/orgpipe.json, then re-run the FIRST cell and this one ---
 r = cfg["roi"]
 dfz = stage_roi.compute_dfz(F, Fneu, r["neuropil_r"], r["baseline_pctl"])
 fig = plots.amp_histograms(dfz); plt.show()""",
