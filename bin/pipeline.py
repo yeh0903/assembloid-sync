@@ -62,6 +62,14 @@ def cmd_run(args, cfg0):
         if layout.is_b3(ds):
             print("SKIP (B3):", ds.name)
             continue
+        if args.all and (layout.plane0(ds) / "F.npy").exists() and not layout.state_path(ds).exists():
+            print("SKIP (historical dataset, no orgpipe state):", ds.name)
+            continue
+        if layout.is_curated(ds) and not args.recurate:
+            print("SKIP (curated; rerunning would DESTROY manual curation - pass --recurate to redo):", ds.name)
+            if not args.all:
+                sys.exit(1)
+            continue
         errs = preflight.check(ds, cfg, needs_space=args.force or not state.is_done(ds, "suite2p", args.smoke))
         for env in {cfg["envs"]["caiman"], cfg["envs"]["suite2p"]}:
             e = preflight.check_env(env)
@@ -97,11 +105,18 @@ def cmd_run(args, cfg0):
 
 
 def cmd_analyze(args, cfg0):
+    e = preflight.check_env(config.load_config(Path("."))["envs"]["code"])
+    if e:
+        print("PREFLIGHT FAILED:", e)
+        sys.exit(1)
     failures = []
     for ds in _targets(args, cfg0):
         cfg = config.load_config(ds)
         if layout.is_b3(ds):
             print("SKIP (B3):", ds.name)
+            continue
+        if args.all and (layout.plane0(ds) / "F.npy").exists() and not layout.state_path(ds).exists():
+            print("SKIP (historical dataset, no orgpipe state):", ds.name)
             continue
         if not state.is_done(ds, "suite2p", smoke=True) and not (layout.plane0(ds) / "F.npy").exists():
             print("SKIP (no suite2p output):", ds.name)
@@ -130,6 +145,10 @@ def cmd_curate(args, cfg0):
     if layout.is_b3(ds):
         print("REFUSING: %s is a B3 dataset (out of scope)" % ds)
         sys.exit(2)
+    stat_file = layout.plane0(ds) / "stat.npy"
+    if not stat_file.exists():
+        print("No suite2p output at %s - run `orgpipe run %s` first." % (stat_file, ds.name))
+        sys.exit(1)
     rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
                          cfg["envs"]["suite2p"], "python",
                          str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
@@ -167,6 +186,7 @@ def main():
         if name == "run":
             p.add_argument("--smoke", action="store_true")
             p.add_argument("--no-gui", action="store_true")
+            p.add_argument("--recurate", action="store_true")
         else:
             p.add_argument("--assume-curated", action="store_true")
     sub.add_parser("curate").add_argument("dataset")

@@ -40,8 +40,9 @@ cnm = stage_denoise.fit(ds, cfg, smoke=SMOKE)""",
 # --- inspect components (the old notebook's cell 3, interactive-only) ---
 import matplotlib.pyplot as plt
 import caiman as cm
+n_preview = 300 if SMOKE else 1000
 movie = cm.load(str(layout.orgpipe_dir(ds) / "smoke_input.tif") if SMOKE
-                else str(layout.raw_tif(ds)), subindices=range(0, 1000))
+                else str(layout.raw_tif(ds)), subindices=range(0, n_preview))
 corr_img = movie.local_correlations(swap_dim=False)
 if cnm.estimates.idx_components is not None and len(cnm.estimates.idx_components):
     cnm.estimates.plot_contours(img=corr_img, idx=cnm.estimates.idx_components)

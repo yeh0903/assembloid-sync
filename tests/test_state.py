@@ -37,3 +37,13 @@ def test_state_missing_stages_key(tmp_path):
     layout.orgpipe_dir(tmp_path).mkdir(parents=True)
     layout.state_path(tmp_path).write_text("{}", encoding="utf-8")
     assert state.read_state(tmp_path) == {"stages": {}}
+
+
+def test_clear_downstream(tmp_path):
+    for s in ("denoise", "fiji", "suite2p", "roi"):
+        state.mark(tmp_path, s, "done")
+    removed = state.clear_downstream(tmp_path, "suite2p")
+    assert removed == ["roi"]
+    st = state.read_state(tmp_path)["stages"]
+    assert "roi" not in st and st["suite2p"]["status"] == "done"
+    assert state.clear_downstream(tmp_path, "roi") == []

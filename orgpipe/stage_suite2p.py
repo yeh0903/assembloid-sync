@@ -33,7 +33,13 @@ def run(ds, cfg, smoke=False):
     if s2p_out.exists():
         import shutil
         print("[suite2p] removing stale output %s (run_s2p would silently reuse its binaries)" % s2p_out)
-        shutil.rmtree(str(s2p_out))
+        if layout.is_curated(ds):
+            print("[suite2p] WARNING: discarding human curation in %s" % s2p_out)
+        try:
+            shutil.rmtree(str(s2p_out))
+        except PermissionError:
+            print("[suite2p] cannot remove %s - close the suite2p GUI if it has this dataset open" % s2p_out)
+            raise
     try:
         import torch
         print("[suite2p] torch %s cuda_available=%s" % (torch.__version__, torch.cuda.is_available()))

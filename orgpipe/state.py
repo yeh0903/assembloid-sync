@@ -44,3 +44,20 @@ def is_done(ds, stage, smoke=False):
     if r.get("status") != "done":
         return False
     return (not r.get("smoke", False)) or smoke
+
+
+DOWNSTREAM = {
+    "denoise": ["fiji", "suite2p", "roi"],
+    "fiji": ["suite2p", "roi"],
+    "suite2p": ["roi"],
+    "roi": [],
+}
+
+
+def clear_downstream(ds, stage):
+    """A stage that actually executes invalidates everything after it."""
+    st = read_state(ds)
+    removed = [k for k in DOWNSTREAM.get(stage, []) if st["stages"].pop(k, None) is not None]
+    if removed:
+        write_state(ds, st)
+    return removed

@@ -36,6 +36,9 @@ def main(stage_name, run_fn):
         sys.exit(0)
 
     state.mark(ds, stage_name, "running", smoke=args.smoke)
+    removed = state.clear_downstream(ds, stage_name)
+    if removed:
+        print("[%s] cleared downstream state: %s (their inputs are changing)" % (stage_name, ", ".join(removed)))
     try:
         run_fn(ds, cfg, args.smoke)
     except Exception:
