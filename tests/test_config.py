@@ -42,3 +42,22 @@ def test_frame_rate_config_wins(tmp_path):
 def test_frame_rate_missing_xml_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         config.resolve_frame_rate(tmp_path, {"frame_rate": None})
+
+
+def test_frame_rate_zero_raises(tmp_path):
+    with pytest.raises(ValueError):
+        config.resolve_frame_rate(tmp_path, {"frame_rate": 0})
+
+
+def test_frame_rate_zero_xml_raises(tmp_path):
+    (tmp_path / "Experiment.xml").write_text(
+        '<?xml version="1.0"?><ThorImageExperiment>'
+        '<LSM frameRate="0" /></ThorImageExperiment>', encoding="utf-8")
+    with pytest.raises(ValueError):
+        config.resolve_frame_rate(tmp_path, {"frame_rate": None})
+
+
+def test_malformed_orgpipe_json_names_file(tmp_path):
+    (tmp_path / "orgpipe.json").write_text("{broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="orgpipe.json"):
+        config.load_config(tmp_path)
