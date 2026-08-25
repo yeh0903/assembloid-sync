@@ -29,6 +29,11 @@ def run(ds, cfg, smoke=False):
     print("[suite2p] ops diffs vs %s:" % cfg["suite2p"]["ops_file"])
     for k in sorted(diffs):
         print("    %-14s = %r" % (k, diffs[k]))
+    s2p_out = layout.caiman_dir(ds) / "suite2p"
+    if s2p_out.exists():
+        import shutil
+        print("[suite2p] removing stale output %s (run_s2p would silently reuse its binaries)" % s2p_out)
+        shutil.rmtree(str(s2p_out))
     try:
         import torch
         print("[suite2p] torch %s cuda_available=%s" % (torch.__version__, torch.cuda.is_available()))
