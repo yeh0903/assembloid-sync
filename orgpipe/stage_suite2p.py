@@ -29,6 +29,11 @@ def run(ds, cfg, smoke=False):
     print("[suite2p] ops diffs vs %s:" % cfg["suite2p"]["ops_file"])
     for k in sorted(diffs):
         print("    %-14s = %r" % (k, diffs[k]))
+    try:
+        import torch
+        print("[suite2p] torch %s cuda_available=%s" % (torch.__version__, torch.cuda.is_available()))
+    except ImportError:
+        pass
     from suite2p import run_s2p
     run_s2p(ops=ops, db=db)
     print("[suite2p] output -> %s" % layout.plane0(ds))
