@@ -9,4 +9,5 @@ def _run(ds, cfg, smoke):
     stage_fiji.run(ds, cfg, smoke)
 
 
-entry.main("fiji", _run)
+if __name__ == "__main__":
+    entry.main("fiji", _run)
