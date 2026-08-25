@@ -1,0 +1,44 @@
+import json
+from pathlib import Path
+import pytest
+from orgpipe import config
+
+
+def test_load_defaults_only(tmp_path):
+    cfg = config.load_config(tmp_path)  # no orgpipe.json in tmp_path
+    assert cfg["roi"]["neuropil_r"] == 0.4
+    assert cfg["suite2p"]["tau"] == 1.0
+    assert cfg["denoise"]["decay_time"] == 1.0
+    assert cfg["frame_rate"] is None
+
+
+def test_dataset_override_deep_merge(tmp_path):
+    (tmp_path / "orgpipe.json").write_text(
+        json.dumps({"roi": {"amp_min_z": 3.5}, "frame_rate": 15.0}), encoding="utf-8")
+    cfg = config.load_config(tmp_path)
+    assert cfg["roi"]["amp_min_z"] == 3.5          # overridden
+    assert cfg["roi"]["neuropil_r"] == 0.4          # untouched sibling survives
+    assert cfg["frame_rate"] == 15.0
+
+
+def test_resolve_dataset_bare_name_and_absolute():
+    cfg = {"data_root": r"Z:\Joseph"}
+    assert config.resolve_dataset("250528_B2_003", cfg) == Path(r"Z:\Joseph\250528_B2_003")
+    assert config.resolve_dataset(r"D:\elsewhere\x", cfg) == Path(r"D:\elsewhere\x")
+
+
+def test_frame_rate_from_xml(tmp_path):
+    (tmp_path / "Experiment.xml").write_text(
+        '<?xml version="1.0"?><ThorImageExperiment>'
+        '<LSM name="ResonanceGalvo" frameRate="29.160" averageMode="0" averageNum="5" />'
+        '</ThorImageExperiment>', encoding="utf-8")
+    assert config.resolve_frame_rate(tmp_path, {"frame_rate": None}) == pytest.approx(29.160)
+
+
+def test_frame_rate_config_wins(tmp_path):
+    assert config.resolve_frame_rate(tmp_path, {"frame_rate": 15.0}) == 15.0
+
+
+def test_frame_rate_missing_xml_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        config.resolve_frame_rate(tmp_path, {"frame_rate": None})
