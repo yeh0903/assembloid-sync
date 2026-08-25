@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from orgpipe import config, entry, layout
+from orgpipe import entry, layout
 
 
 def _run(ds, cfg, smoke):

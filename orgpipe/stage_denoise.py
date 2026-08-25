@@ -25,7 +25,7 @@ def write_denoised(cnm, out_path, chunk=200):
             t1 = min(t0 + chunk, T)
             block = np.asarray(A @ C[:, t0:t1] + b @ f[:, t0:t1])
             block = block.reshape(dims + (t1 - t0,), order="F")
-            block = block.transpose(2, 0, 1).astype(np.float32)
+            block = block.transpose(2, 0, 1).astype(np.float32, copy=False)
             tif.write(block, contiguous=True, metadata=None)
     return T
 
@@ -69,6 +69,7 @@ def fit(ds, cfg, smoke=False):
         "min_SNR": d["min_SNR"],
         "rval_thr": d["rval_thr"],
         "use_cnn": d["use_cnn"],
+        # caiman 1.11.4 ignores flat cnn_thr/min_fitness_raw (logs 'unused'); the manual notebook passed the same flat dict - keep for fidelity, do NOT nest under 'quality'
         "cnn_thr": d["cnn_thr"],
         "min_fitness_raw": d["min_fitness_raw"],
         "nb": d["nb"],
@@ -87,9 +88,30 @@ def fit(ds, cfg, smoke=False):
 
 
 def run(ds, cfg, smoke=False):
+    d = cfg["denoise"]
+    if int(d["chunk_size"]) < 1:
+        raise ValueError("denoise.chunk_size must be >= 1, got %r" % d["chunk_size"])
+    if int(d["nb"]) < 1:
+        raise ValueError("denoise.nb must be >= 1 (background terms are required), got %r" % d["nb"])
     cnm = fit(ds, cfg, smoke)
-    T = write_denoised(cnm, layout.denoised_tif(ds), chunk=cfg["denoise"]["chunk_size"])
+    checkpoint = layout.orgpipe_dir(ds) / "cnm_fit.hdf5"
+    try:
+        cnm.save(str(checkpoint))  # a failed write below is recoverable without re-fitting
+        print("[denoise] fit checkpoint -> %s" % checkpoint)
+    except Exception as e:
+        print("[denoise] WARNING: could not save fit checkpoint (%s); continuing" % e)
+    partial = layout.denoised_tif(ds).with_suffix(".tif.partial")
+    T = write_denoised(cnm, partial, chunk=d["chunk_size"])
+    import os
+    os.replace(str(partial), str(layout.denoised_tif(ds)))
     print("[denoise] wrote %d frames -> %s" % (T, layout.denoised_tif(ds)))
+    if checkpoint.exists():
+        checkpoint.unlink()
     if not cfg.get("keep_temp", False):
         shutil.rmtree(layout.caiman_temp(ds), ignore_errors=True)
-        print("[denoise] cleaned caiman_temp")
+        if layout.caiman_temp(ds).exists():
+            leftover = sum(p.stat().st_size for p in layout.caiman_temp(ds).rglob("*") if p.is_file())
+            print("[denoise] WARNING: caiman_temp NOT fully removed (%.1f GB leftover, locked files?)"
+                  % (leftover / 1024 ** 3))
+        else:
+            print("[denoise] cleaned caiman_temp")
