@@ -42,7 +42,7 @@ def logs_dir(ds):
 
 
 def is_b3(ds):
-    return "_B3_" in Path(ds).name
+    return "_b3_" in Path(ds).name.lower()
 
 
 def is_curated(ds, min_gap_s=2.0):

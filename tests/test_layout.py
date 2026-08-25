@@ -19,6 +19,7 @@ def test_is_b3():
     assert layout.is_b3(Path(r"Z:\Joseph\250605_B3_000"))
     assert not layout.is_b3(Path(r"Z:\Joseph\250528_B2_003"))
     assert not layout.is_b3(Path(r"Z:\Joseph\241029_ILDT8_00"))
+    assert layout.is_b3(Path(r"Z:\Joseph\250605_b3_000"))
 
 
 def test_is_curated(tmp_path):
