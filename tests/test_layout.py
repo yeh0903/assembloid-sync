@@ -5,7 +5,7 @@ from assembloid_sync import layout
 
 
 def test_paths(tmp_path):
-    ds = tmp_path / "250528_B2_003"
+    ds = tmp_path / "sample_dataset_001"
     assert layout.raw_tif(ds).name == "Image_scan_1_region_0_0.tif"
     assert layout.denoised_tif(ds).name == "denoised_movie_reconstructed.tif"
     assert layout.caiman_dir(ds) == ds / "caiman"
@@ -16,10 +16,17 @@ def test_paths(tmp_path):
 
 
 def test_is_b3():
-    assert layout.is_b3(Path(r"Z:\Joseph\250605_B3_000"))
-    assert not layout.is_b3(Path(r"Z:\Joseph\250528_B2_003"))
-    assert not layout.is_b3(Path(r"Z:\Joseph\241029_ILDT8_00"))
-    assert layout.is_b3(Path(r"Z:\Joseph\250605_b3_000"))
+    assert layout.is_b3(Path(r"D:\data\250605_B3_000"))
+    assert not layout.is_b3(Path(r"D:\data\250528_B2_003"))
+    assert not layout.is_b3(Path(r"D:\data\241029_ILDT8_00"))
+    assert layout.is_b3(Path(r"D:\data\250605_b3_000"))
+
+
+def test_input_names_configurable(tmp_path):
+    cfg = {"input": {"raw_tif": "movie.tif", "metadata_xml": "meta.xml"}}
+    assert layout.raw_tif(tmp_path, cfg).name == "movie.tif"
+    assert layout.experiment_xml(tmp_path, cfg).name == "meta.xml"
+    assert layout.raw_tif(tmp_path).name == "Image_scan_1_region_0_0.tif"
 
 
 def test_is_curated(tmp_path):

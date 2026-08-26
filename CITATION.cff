@@ -1,0 +1,138 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: assembloid-sync
+type: software
+authors:
+  - family-names: Yeh
+    given-names: Joseph
+license: GPL-3.0
+repository-code: "https://github.com/yeh0903/assembloid-sync"
+date-released: "2026-08-26"
+references:
+  - type: article
+    title: "CaImAn: an open source tool for scalable calcium imaging data analysis"
+    authors:
+      - family-names: Giovannucci
+        given-names: A.
+    journal: eLife
+    year: 2019
+    volume: 8
+    start: e38173
+
+  - type: article
+    title: "Efficient and accurate extraction of in vivo calcium signals from microendoscopic video data"
+    authors:
+      - family-names: Zhou
+        given-names: P.
+    journal: eLife
+    year: 2018
+    volume: 7
+    start: e28728
+
+  - type: article
+    title: "Suite2p: beyond 10,000 neurons with standard two-photon microscopy"
+    authors:
+      - family-names: Pachitariu
+        given-names: M.
+    journal: bioRxiv
+    year: 2017
+    start: "061507"
+
+  - type: article
+    title: "Cellpose: a generalist algorithm for cellular segmentation"
+    authors:
+      - family-names: Stringer
+        given-names: C.
+      - family-names: Wang
+        given-names: T.
+      - family-names: Michaelos
+        given-names: M.
+      - family-names: Pachitariu
+        given-names: M.
+    journal: "Nature Methods"
+    year: 2021
+    volume: 18
+    start: 100
+    end: 106
+
+  - type: article
+    title: "Cellpose3: one-click image restoration for improved cellular segmentation"
+    authors:
+      - family-names: Stringer
+        given-names: C.
+      - family-names: Pachitariu
+        given-names: M.
+    journal: "Nature Methods"
+    year: 2025
+
+  - type: article
+    title: "Fiji: an open-source platform for biological-image analysis"
+    authors:
+      - family-names: Schindelin
+        given-names: J.
+    journal: "Nature Methods"
+    year: 2012
+    volume: 9
+    start: 676
+    end: 682
+
+  - type: article
+    title: "Fast online deconvolution of calcium imaging data"
+    authors:
+      - family-names: Friedrich
+        given-names: J.
+      - family-names: Zhou
+        given-names: P.
+      - family-names: Paninski
+        given-names: L.
+    journal: "PLoS Computational Biology"
+    year: 2017
+    volume: 13
+    start: e1005423
+
+  - type: article
+    title: "Automated quantification of neuronal networks and single-cell calcium dynamics using calcium imaging"
+    authors:
+      - family-names: Patel
+        given-names: TP
+      - family-names: Man
+        given-names: K.
+      - family-names: Firestein
+        given-names: BL
+      - family-names: Meaney
+        given-names: DF
+    journal: "Journal of Neuroscience Methods"
+    year: 2015
+    volume: 243
+    start: 26
+    end: 38
+
+  - type: article
+    title: "Testing for nonlinearity in time series: the method of surrogate data"
+    authors:
+      - family-names: Theiler
+        given-names: J.
+      - family-names: Eubank
+        given-names: S.
+      - family-names: Longtin
+        given-names: A.
+      - family-names: Galdrikian
+        given-names: B.
+      - family-names: Farmer
+        given-names: JD
+    journal: "Physica D"
+    year: 1992
+    volume: 58
+    start: 77
+    end: 94
+
+  - type: article
+    title: "Fast and sensitive GCaMP calcium indicators for imaging neural populations"
+    authors:
+      - family-names: Zhang
+        given-names: Y.
+    journal: Nature
+    year: 2023
+    volume: 615
+    start: 884
+    end: 891

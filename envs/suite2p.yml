@@ -1,0 +1,26 @@
+name: suite2p_gpu
+channels:
+  - defaults
+dependencies:
+  - defaults/win-64::ca-certificates==2025.2.25=haa95532_0
+  - defaults/noarch::tzdata==2025a=h04d1e81_0
+  - defaults/win-64::vs2015_runtime==14.42.34433=he0abc0d_4
+  - defaults/win-64::vc==14.42=haa95532_4
+  - defaults/win-64::openssl==3.0.15=h827c3e9_0
+  - defaults/win-64::sqlite==3.45.3=h2bbff1b_0
+  - defaults/win-64::python==3.9.21=h8205438_1
+  - defaults/win-64::setuptools==75.8.0=py39haa95532_0
+  - defaults/win-64::wheel==0.45.1=py39haa95532_0
+  - defaults/win-64::pip==25.0=py39haa95532_0
+  - pip:
+    - suite2p==0.14.4
+    - cellpose==3.1.1.1
+    # suite2p 0.14.4 (via cellpose) requires torch but does not pin a CUDA
+    # build. The pin below resolves to the CPU-only wheel from plain PyPI.
+    # This machine actually runs torch==2.6.0+cu124 (CUDA 12.4) for GPU
+    # Cellpose detection - a plain `pip install torch` never gives you that;
+    # you must install it explicitly from PyTorch's own wheel index:
+    #   pip install torch==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+    # then run tools/patch_suite2p_gpu.py so suite2p actually asks Cellpose
+    # to use the GPU (see docs/SETUP.md, "GPU (optional)").
+    - torch==2.6.0

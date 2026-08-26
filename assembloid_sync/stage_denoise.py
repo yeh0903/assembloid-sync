@@ -44,7 +44,7 @@ def fit(ds, cfg):
         format="%(relativeCreated)12d [%(filename)s:%(funcName)20s():%(lineno)s] %(message)s",
         level=logging.INFO)
 
-    fname = layout.raw_tif(ds)
+    fname = layout.raw_tif(ds, cfg)
     fr = _config.resolve_frame_rate(ds, cfg)
     d = cfg["denoise"]
     params_dict = {

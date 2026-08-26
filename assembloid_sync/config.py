@@ -91,9 +91,11 @@ def resolve_frame_rate(dataset, cfg):
         if fr <= 0:
             raise ValueError("frame_rate must be > 0, got %r" % (cfg["frame_rate"],))
         return fr
-    xml_path = Path(dataset) / "Experiment.xml"
+    xml_path = layout.experiment_xml(dataset, cfg)
     if not xml_path.exists():
-        raise FileNotFoundError(str(xml_path))
+        raise FileNotFoundError(
+            "%s not found - set frame_rate explicitly in config, or "
+            "input.metadata_xml if your metadata file has a different name" % xml_path)
     lsm = ET.parse(str(xml_path)).getroot().find("LSM")
     if lsm is None or lsm.get("frameRate") is None:
         raise ValueError("no LSM/@frameRate in %s" % xml_path)

@@ -63,7 +63,7 @@ def _targets(args, cfg0):
                 if p.is_dir()
                 and p.name[:2].isdigit()
                 and not layout.is_b3(p)
-                and layout.raw_tif(p).exists()]
+                and layout.raw_tif(p, cfg0).exists()]
     return [config.resolve_dataset(args.dataset, cfg0)]
 
 
@@ -179,7 +179,7 @@ def cmd_status(args, cfg0):
     root = _data_root(cfg0)
     print("%-46s %-8s %-6s %-8s %-8s %-5s" % ("dataset", "denoise", "fiji", "suite2p", "curated", "roi"))
     for p in sorted(root.iterdir()):
-        if not p.is_dir() or not layout.raw_tif(p).exists():
+        if not p.is_dir() or not layout.raw_tif(p, cfg0).exists():
             continue
         if layout.is_b3(p):
             continue

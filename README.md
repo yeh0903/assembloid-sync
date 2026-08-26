@@ -11,6 +11,8 @@ assembloid-sync run 250528_B2_003        # denoise -> contrast -> cell detection
 assembloid-sync analyze 250528_B2_003    # correlation + synchronization metrics   (~1-2 min)
 ```
 
+Setting up from scratch? See [docs/SETUP.md](docs/SETUP.md).
+
 Built for **jGCaMP8s** two-photon recordings of fused cortical organoids at ~30 Hz,
 512×512, acquired on ThorImage. Replaces a manual workflow that took ~5.5 hours per
 dataset across three separate applications and three human touchpoints.
@@ -138,12 +140,13 @@ which is what makes propagation visible in the trace plots.
 — used for the heatmap and for corrSYN, so that the larger organoid cannot dominate the
 statistic.
 
-**corrSYN — network synchronization** (Synchronization Cluster Analysis, after
-FluoroSNNAP). Eigendecompose the correlation matrix. Under the null hypothesis of no
-synchrony, its eigenvalue spectrum still has structure from finite data, so the null is
-built empirically: **AAFT surrogates** (Amplitude-Adjusted Fourier Transform — randomize
-Fourier phases while preserving both the power spectrum and the amplitude distribution)
-produce surrogate correlation matrices and their eigenvalue spectra. Then
+**corrSYN — network synchronization**, follows the Synchronization Cluster Analysis
+method of Patel et al. (2015) (after FluoroSNNAP). Eigendecompose the correlation
+matrix. Under the null hypothesis of no synchrony, its eigenvalue spectrum still has
+structure from finite data, so the null is built empirically: **AAFT surrogates**
+(Amplitude-Adjusted Fourier Transform — randomize Fourier phases while preserving both
+the power spectrum and the amplitude distribution) produce surrogate correlation
+matrices and their eigenvalue spectra. Then
 
 ```
 SI_i = (λ_i − λ̄_sur,i) / (M − λ̄_sur,i)     if λ_i > λ̄_sur,i + 2·SD_sur,i,  else 0
@@ -155,11 +158,12 @@ synchrony (all M neurons in one mode). Synchronization *clusters* are eigenvecto
 `SI ≥ 0.01`; each neuron is assigned to the cluster maximizing its participation index
 `PI_k = λ_k · v_k²`, and clusters smaller than `sca_min_cluster_size` are discarded.
 
-**IOSI — inter-organoid synchronization.** The key move is to build the cross-correlation
-matrix **between** organoids only (`M_A × M_B`), so within-organoid synchrony cannot
-inflate the result. Its coupling strength is the dominant singular value from an SVD,
-normalized by `√(M_A·M_B)`. The null distribution comes from AAFT surrogates of organoid
-B alone — destroying A↔B timing while preserving each trace's own spectrum. Then
+**IOSI — inter-organoid synchronization.** IOSI as implemented here builds the
+cross-correlation matrix **between** organoids only (`M_A × M_B`), so within-organoid
+synchrony cannot inflate the result. Its coupling strength is the dominant singular
+value from an SVD, normalized by `√(M_A·M_B)`. The null distribution comes from AAFT
+surrogates of organoid B alone — destroying A↔B timing while preserving each trace's
+own spectrum. Then
 
 ```
 IOSI = (observed − surrogate_mean) / (1 − surrogate_mean)   if observed > mean + 2·SD, else 0
@@ -367,3 +371,45 @@ than asserted:
 
 Design rationale and decision history: [`docs/superpowers/specs/`](docs/superpowers/specs/)
 and [`docs/superpowers/plans/`](docs/superpowers/plans/).
+
+---
+
+## References
+
+**Tools this pipeline runs**
+
+- CaImAn — Giovannucci A, et al. CaImAn: an open source tool for scalable calcium
+  imaging data analysis. *eLife* 2019;8:e38173.
+- CNMF-E — Zhou P, et al. Efficient and accurate extraction of in vivo calcium signals
+  from microendoscopic video data. *eLife* 2018;7:e28728.
+- suite2p — Pachitariu M, et al. Suite2p: beyond 10,000 neurons with standard
+  two-photon microscopy. *bioRxiv* 2017:061507.
+- Cellpose — Stringer C, Wang T, Michaelos M, Pachitariu M. Cellpose: a generalist
+  algorithm for cellular segmentation. *Nature Methods* 2021;18:100–106.
+- Cellpose3 (the `cyto3` model used here) — Stringer C, Pachitariu M. Cellpose3:
+  one-click image restoration for improved cellular segmentation. *Nature Methods* 2025.
+- Fiji — Schindelin J, et al. Fiji: an open-source platform for biological-image
+  analysis. *Nature Methods* 2012;9:676–682.
+- OASIS deconvolution — Friedrich J, Zhou P, Paninski L. Fast online deconvolution of
+  calcium imaging data. *PLoS Computational Biology* 2017;13:e1005423.
+
+**Methods implemented in the analysis**
+
+- Synchronization Cluster Analysis / corrSYN — Patel TP, Man K, Firestein BL, Meaney DF.
+  Automated quantification of neuronal networks and single-cell calcium dynamics using
+  calcium imaging. *Journal of Neuroscience Methods* 2015;243:26–38.
+- AAFT surrogate data — Theiler J, Eubank S, Longtin A, Galdrikian B, Farmer JD. Testing
+  for nonlinearity in time series: the method of surrogate data. *Physica D*
+  1992;58:77–94.
+- jGCaMP8 indicator kinetics — Zhang Y, et al. Fast and sensitive GCaMP calcium
+  indicators for imaging neural populations. *Nature* 2023;615:884–891.
+
+A machine-readable version of the top citation is in [`CITATION.cff`](CITATION.cff).
+
+---
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE). This project imports CaImAn (GPL-2.0-or-later)
+and suite2p (GPL-3.0); GPL-3.0 is the compatible license for the combined work.
+Cellpose (BSD-3) and the remaining dependencies are permissively licensed.

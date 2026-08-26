@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import tifffile
-from assembloid_sync import layout
+from assembloid_sync import config, layout
 
 
 def main():
@@ -24,8 +24,9 @@ def main():
     args = ap.parse_args()
 
     src, dst = Path(args.source), Path(args.dest)
-    raw = layout.raw_tif(src)
-    xml = layout.experiment_xml(src)
+    cfg = config.load_config(src)
+    raw = layout.raw_tif(src, cfg)
+    xml = layout.experiment_xml(src, cfg)
     for p in (raw, xml):
         if not p.exists():
             sys.exit("missing %s" % p)
@@ -35,8 +36,8 @@ def main():
         total = len(t.pages)
         n = min(args.frames, total)
         frames = np.stack([t.pages[i].asarray() for i in range(n)])
-    tifffile.imwrite(str(layout.raw_tif(dst)), frames)
-    shutil.copy2(str(xml), str(layout.experiment_xml(dst)))
+    tifffile.imwrite(str(layout.raw_tif(dst, cfg)), frames)
+    shutil.copy2(str(xml), str(layout.experiment_xml(dst, cfg)))
     print("wrote %d of %d frames -> %s" % (n, total, dst))
     print("run it with:  assembloid-sync run %s" % dst)
 

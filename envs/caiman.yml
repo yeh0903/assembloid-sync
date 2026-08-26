@@ -1,0 +1,9 @@
+name: caiman_env
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - conda-forge::caiman
+  - conda-forge::notebook
+  - conda-forge::matplotlib-base
+  - conda-forge::tifffile

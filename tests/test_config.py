@@ -22,8 +22,8 @@ def test_dataset_override_deep_merge(tmp_path):
 
 
 def test_resolve_dataset_bare_name_and_absolute():
-    cfg = {"data_root": r"Z:\Joseph"}
-    assert config.resolve_dataset("250528_B2_003", cfg) == Path(r"Z:\Joseph\250528_B2_003")
+    cfg = {"data_root": r"D:\data"}
+    assert config.resolve_dataset("sample_dataset_001", cfg) == Path(r"D:\data\sample_dataset_001")
     assert config.resolve_dataset(r"D:\elsewhere\x", cfg) == Path(r"D:\elsewhere\x")
 
 

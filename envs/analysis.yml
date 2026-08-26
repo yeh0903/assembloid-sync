@@ -1,0 +1,18 @@
+name: code
+channels:
+  - defaults
+dependencies:
+  - anaconda::numpy
+  - conda-forge::pandas
+  - conda-forge::matplotlib-base
+  - conda-forge::seaborn
+  - conda-forge::scikit-learn
+  - conda-forge::notebook
+  - conda-forge::cudatoolkit
+  - conda-forge::oasis
+  - oasis-deconv
+  - conda-forge::pywavelets
+  - scipy
+  - pip:
+    - pytest==9.1.1
+    - tifffile==2026.8.23

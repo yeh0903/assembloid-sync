@@ -4,6 +4,8 @@
   "keep_temp": false,
   "indicator": "jGCaMP8s",
   "_indicator_note": "denoise.decay_time and suite2p.tau below are set for jGCaMP8s. ThorImage's Experiment.xml does NOT record the indicator, so it is declared here. Changing indicator means changing those two numbers - see README, 'Indicator kinetics'.",
+  "input": { "raw_tif": null, "metadata_xml": null },
+  "_input_note": "Defaults are ThorImage conventions (Image_scan_1_region_0_0.tif, Experiment.xml). Set these if your acquisition software names files differently; labs without a ThorImage XML should also set frame_rate explicitly.",
   "envs": { "caiman": "caiman_env", "suite2p": "suite2p", "code": "code" },
   "denoise": { "decay_time": 1.0, "gSig": [5, 5], "rf": 20, "stride": 6, "K": 5,
                "p": 2, "nb": 2, "merge_thr": 0.80, "min_SNR": 2.0, "rval_thr": 0.80,

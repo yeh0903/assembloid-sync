@@ -13,10 +13,10 @@ def check(ds, cfg, needs_space=True):
     if not Path(ds).is_dir():
         return ["dataset folder does not exist: %s" % ds]
     errs = []
-    if not layout.raw_tif(ds).exists():
-        errs.append("missing raw tif: %s" % layout.raw_tif(ds))
+    if not layout.raw_tif(ds, cfg).exists():
+        errs.append("missing raw tif: %s" % layout.raw_tif(ds, cfg))
     try:
-        ET.parse(str(layout.experiment_xml(ds)))
+        ET.parse(str(layout.experiment_xml(ds, cfg)))
     except Exception as e:
         errs.append("Experiment.xml unreadable: %s" % e)
     imagej_exe = config.resolve_imagej(cfg)

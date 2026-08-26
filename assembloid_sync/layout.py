@@ -2,16 +2,19 @@
 from pathlib import Path
 
 RAW_TIF_NAME = "Image_scan_1_region_0_0.tif"
+METADATA_NAME = "Experiment.xml"
 SEQ_PREFIX = "denoised_movie_reconstructed"
 DATASET_CONFIG_NAME = "assembloid-sync.json"
 
 
-def raw_tif(ds):
-    return Path(ds) / RAW_TIF_NAME
+def raw_tif(ds, cfg=None):
+    name = (cfg or {}).get("input", {}).get("raw_tif") or RAW_TIF_NAME
+    return Path(ds) / name
 
 
-def experiment_xml(ds):
-    return Path(ds) / "Experiment.xml"
+def experiment_xml(ds, cfg=None):
+    name = (cfg or {}).get("input", {}).get("metadata_xml") or METADATA_NAME
+    return Path(ds) / name
 
 
 def denoised_tif(ds):
