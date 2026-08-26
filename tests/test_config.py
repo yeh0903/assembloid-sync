@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
 import pytest
-from orgpipe import config
+from assembloid_sync import config
 
 
 def test_load_defaults_only(tmp_path):
-    cfg = config.load_config(tmp_path)  # no orgpipe.json in tmp_path
+    cfg = config.load_config(tmp_path)  # no assembloid-sync.json in tmp_path
     assert cfg["roi"]["neuropil_r"] == 0.4
     assert cfg["suite2p"]["tau"] == 1.0
     assert cfg["denoise"]["decay_time"] == 1.0
@@ -13,7 +13,7 @@ def test_load_defaults_only(tmp_path):
 
 
 def test_dataset_override_deep_merge(tmp_path):
-    (tmp_path / "orgpipe.json").write_text(
+    (tmp_path / "assembloid-sync.json").write_text(
         json.dumps({"roi": {"amp_min_z": 3.5}, "frame_rate": 15.0}), encoding="utf-8")
     cfg = config.load_config(tmp_path)
     assert cfg["roi"]["amp_min_z"] == 3.5          # overridden
@@ -57,7 +57,23 @@ def test_frame_rate_zero_xml_raises(tmp_path):
         config.resolve_frame_rate(tmp_path, {"frame_rate": None})
 
 
-def test_malformed_orgpipe_json_names_file(tmp_path):
-    (tmp_path / "orgpipe.json").write_text("{broken", encoding="utf-8")
-    with pytest.raises(ValueError, match="orgpipe.json"):
+def test_malformed_dataset_json_names_file(tmp_path):
+    (tmp_path / "assembloid-sync.json").write_text("{broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="assembloid-sync.json"):
         config.load_config(tmp_path)
+
+
+def test_resolve_data_root_env_var_wins(tmp_path, monkeypatch):
+    monkeypatch.setenv(config.ENV_PREFIX + "DATA_ROOT", str(tmp_path))
+    assert config.resolve_data_root({"data_root": r"Z:\other"}) == tmp_path
+
+
+def test_resolve_data_root_falls_back_to_cwd(monkeypatch, tmp_path):
+    monkeypatch.delenv(config.ENV_PREFIX + "DATA_ROOT", raising=False)
+    monkeypatch.chdir(tmp_path)
+    assert config.resolve_data_root({}) == Path.cwd()
+
+
+def test_resolve_imagej_env_var_wins(tmp_path, monkeypatch):
+    monkeypatch.setenv(config.ENV_PREFIX + "IMAGEJ", str(tmp_path / "ij.exe"))
+    assert config.resolve_imagej({}) == tmp_path / "ij.exe"

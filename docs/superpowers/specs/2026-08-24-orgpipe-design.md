@@ -1,5 +1,7 @@
 # orgpipe — design
 
+> Historical record: the project was later renamed from `orgpipe` to `assembloid-sync` (package `assembloid_sync`).
+
 **Date:** 2026-08-24
 **Status:** awaiting review
 

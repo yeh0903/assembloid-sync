@@ -1,4 +1,4 @@
-"""Per-dataset stage state in <dataset>/.orgpipe/state.json. Tier 1: stdlib only."""
+"""Per-dataset stage state in <dataset>/.assembloid-sync/state.json. Tier 1: stdlib only."""
 import datetime
 import json
 import os
@@ -20,7 +20,7 @@ def read_state(ds):
 
 
 def write_state(ds, st):
-    layout.orgpipe_dir(ds).mkdir(parents=True, exist_ok=True)
+    layout.state_dir(ds).mkdir(parents=True, exist_ok=True)
     p = layout.state_path(ds)
     tmp = p.with_name(p.name + ".tmp")
     tmp.write_text(json.dumps(st, indent=2), encoding="utf-8")

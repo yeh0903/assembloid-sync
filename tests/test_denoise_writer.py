@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import scipy.sparse as sp
 import tifffile
-from orgpipe.stage_denoise import write_denoised
+from assembloid_sync.stage_denoise import write_denoised
 
 
 class FakeEstimates:

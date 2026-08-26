@@ -2,7 +2,7 @@
 
 Usage in an entry script:
 
-    from orgpipe import entry
+    from assembloid_sync import entry
     def _run(ds, cfg, smoke):   # heavy imports happen inside _run
         ...
     entry.main("denoise", _run)
@@ -23,7 +23,7 @@ def main(stage_name, run_fn):
 
     cfg = config.load_config(args.dataset)
     ds = config.resolve_dataset(args.dataset, cfg)
-    cfg = config.load_config(ds)  # reload so <ds>/orgpipe.json is honoured
+    cfg = config.load_config(ds)  # reload so <ds>/assembloid-sync.json is honoured
 
     if layout.is_b3(ds):
         print("REFUSING: %s is a B3 dataset (out of scope)" % ds)

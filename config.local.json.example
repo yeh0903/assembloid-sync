@@ -1,0 +1,6 @@
+{
+  "_note": "Copy this file to config.local.json (gitignored) and fill in this machine's values. config.local.json overrides defaults.json but is itself overridden by a dataset's own assembloid-sync.json.",
+  "data_root": "C:\\path\\to\\your\\datasets",
+  "envs": { "caiman": "caiman_env", "suite2p": "suite2p", "code": "code" },
+  "fiji": { "imagej_exe": "C:\\path\\to\\Fiji.app\\ImageJ-win64.exe" }
+}

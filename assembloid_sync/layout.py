@@ -3,6 +3,7 @@ from pathlib import Path
 
 RAW_TIF_NAME = "Image_scan_1_region_0_0.tif"
 SEQ_PREFIX = "denoised_movie_reconstructed"
+DATASET_CONFIG_NAME = "assembloid-sync.json"
 
 
 def raw_tif(ds):
@@ -25,20 +26,20 @@ def plane0(ds):
     return caiman_dir(ds) / "suite2p" / "plane0"
 
 
-def orgpipe_dir(ds):
-    return Path(ds) / ".orgpipe"
+def state_dir(ds):
+    return Path(ds) / ".assembloid-sync"
 
 
 def state_path(ds):
-    return orgpipe_dir(ds) / "state.json"
+    return state_dir(ds) / "state.json"
 
 
 def caiman_temp(ds):
-    return orgpipe_dir(ds) / "caiman_temp"
+    return state_dir(ds) / "caiman_temp"
 
 
 def logs_dir(ds):
-    return orgpipe_dir(ds) / "logs"
+    return state_dir(ds) / "logs"
 
 
 def is_b3(ds):

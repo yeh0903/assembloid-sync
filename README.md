@@ -6,9 +6,9 @@ Automated two-photon calcium-imaging pipeline for **paired neural organoids
 Two commands, one human step in between:
 
 ```bash
-orgpipe run 250528_B2_003        # denoise -> contrast -> cell detection   (~30 min)
+assembloid-sync run 250528_B2_003        # denoise -> contrast -> cell detection   (~30 min)
 #   ... curate cells in the suite2p GUI, save, close ...
-orgpipe analyze 250528_B2_003    # correlation + synchronization metrics   (~1-2 min)
+assembloid-sync analyze 250528_B2_003    # correlation + synchronization metrics   (~1-2 min)
 ```
 
 Built for **jGCaMP8s** two-photon recordings of fused cortical organoids at ~30 Hz,
@@ -179,14 +179,16 @@ Written into the dataset folder:
 | `assembloid_demo.jpg` | ROI centroids colored by organoid assignment |
 | `denoised_movie_reconstructed.tif` | CNMF-E reconstruction (float32 BigTIFF) |
 | `caiman/` | per-frame TIFF sequence + `suite2p/plane0/` outputs |
-| `.orgpipe/` | pipeline state, per-stage logs |
+| `.assembloid-sync/` | pipeline state, per-stage logs |
 
 ---
 
 ## Configuration
 
-Defaults live in `defaults.json`. Per-dataset overrides go in
-`<dataset>/orgpipe.json` and only need the keys that differ:
+Defaults live in `defaults.json`, merged with the gitignored `config.local.json`
+(machine-specific paths and env names - see "Installation / running elsewhere"
+below). Per-dataset overrides go in `<dataset>/assembloid-sync.json` and only need
+the keys that differ:
 
 ```json
 { "roi": { "amp_min_z": 3.2 } }
@@ -225,7 +227,7 @@ suite2p's `fs`, so they cannot drift apart.
 `neuropil_r` 0.4 · `baseline_pctl` 8 · `amp_min_z` 3.75 · `burst_z` 2.5 ·
 `n_surrogates` 200 · `seed` 0. Tune `amp_min_z`/`burst_z` against the amplitude
 histograms in `notebooks/ROI_analysis.ipynb`, then pin the chosen values in that
-dataset's `orgpipe.json`.
+dataset's `assembloid-sync.json`.
 
 ---
 
@@ -233,10 +235,10 @@ dataset's `orgpipe.json`.
 
 | command | what it does |
 |---|---|
-| `orgpipe run <ds>` | denoise → contrast/export → detection, then opens the curation GUI |
-| `orgpipe analyze <ds>` | correlation + synchronization metrics (requires curation) |
-| `orgpipe curate <ds>` | reopen the suite2p GUI on a dataset |
-| `orgpipe status` | table of every dataset × stage |
+| `assembloid-sync run <ds>` | denoise → contrast/export → detection, then opens the curation GUI |
+| `assembloid-sync analyze <ds>` | correlation + synchronization metrics (requires curation) |
+| `assembloid-sync curate <ds>` | reopen the suite2p GUI on a dataset |
+| `assembloid-sync status` | table of every dataset × stage |
 
 | flag | effect |
 |---|---|
@@ -269,7 +271,7 @@ Three conda environments that **cannot import each other** — CaImAn (3.10), su
 (3.9), analysis (3.13) — so the package is organized around a three-tier import rule:
 
 ```
-orgpipe/
+assembloid_sync/
 ├── config.py  state.py  layout.py  preflight.py  entry.py   TIER 1: stdlib only, py3.9
 │                                                            syntax, imports everywhere
 ├── stage_denoise.py    TIER 2: imports caiman   (function-local)
@@ -288,8 +290,8 @@ anywhere; the orchestrator shells out with `conda run -n <env>` and never import
 scientific package itself. `bin/` entry scripts all carry an `if __name__ == "__main__"`
 guard — Windows spawn-based multiprocessing re-executes them in every worker.
 
-State per dataset lives in `<dataset>/.orgpipe/state.json`; stages are idempotent and
-skip when already done, so an interrupted run resumes by reissuing the same command.
+State per dataset lives in `<dataset>/.assembloid-sync/state.json`; stages are idempotent
+and skip when already done, so an interrupted run resumes by reissuing the same command.
 
 ---
 
@@ -304,6 +306,22 @@ skip when already done, so an interrupted run resumes by reissuing the same comm
 GPU support needs **two** changes, not one: a CUDA build of torch *and* a patch making
 suite2p pass `gpu=True` to `CellposeModel` (0.14.4 hardcodes the CPU default). Installing
 CUDA torch alone changes nothing.
+
+## Installation / running elsewhere
+
+The repo carries no machine-specific paths — `data_root`, conda env names and the
+ImageJ/Fiji path all resolve at runtime instead of being hardcoded:
+
+1. Clone the repo anywhere.
+2. Copy `config.local.json.example` to `config.local.json` (gitignored) and fill in
+   this machine's values: `data_root`, `envs` (the three conda env names), and
+   optionally `fiji.imagej_exe` — if omitted, it's auto-discovered from common Fiji
+   install locations and then `PATH`.
+3. Run `./assembloid-sync status` (or `assembloid-sync.bat status` on Windows) to
+   confirm it finds your datasets.
+
+Two environment variables override the config file, useful for one-off runs or CI:
+`ASSEMBLOID_SYNC_DATA_ROOT` and `ASSEMBLOID_SYNC_IMAGEJ`.
 
 ## Performance
 

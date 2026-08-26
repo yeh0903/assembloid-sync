@@ -1,6 +1,6 @@
 import numpy as np
-from orgpipe import config
-from orgpipe.stage_suite2p import build_ops
+from assembloid_sync import config
+from assembloid_sync.stage_suite2p import build_ops
 
 
 def _cfg():

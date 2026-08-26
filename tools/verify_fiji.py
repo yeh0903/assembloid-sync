@@ -1,8 +1,9 @@
-"""Pixel-compare automated Fiji output against the hand-made 250514_B2_000/caiman.
+"""Pixel-compare automated Fiji output against a hand-made <dataset>/caiman reference.
 
 Runs the macro on the real denoised movie into a scratch dir, then compares
-every frame's pixels exactly and the display range to float32 precision.
-READ-ONLY on the dataset. Usage: python tools/verify_fiji.py [--frames N]
+every frame's pixels exactly and (optionally) the display range to float32
+precision. READ-ONLY on the dataset.
+Usage: python tools/verify_fiji.py <dataset> [--frames N] [--expect-range MIN MAX]
 """
 import argparse
 import sys
@@ -12,20 +13,28 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import tifffile
-from orgpipe import config, stage_fiji
+from assembloid_sync import config, stage_fiji
 
-DS = Path(r"Z:\Joseph\250514_B2_000")
-MANUAL = DS / "caiman"
-MANUAL_RANGE = (149.92518615722656, 887.4190063476562)  # recorded in the hand-made frames
+# recorded display range from the hand-made reference for 250514_B2_000;
+# pass to --expect-range to check a dataset's drift against it
+MANUAL_RANGE = (149.92518615722656, 887.4190063476562)
 
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("dataset", help="dataset folder holding both "
+                    "denoised_movie_reconstructed.tif and a hand-made caiman/ to compare against")
     ap.add_argument("--frames", type=int, default=0, help="0 = all 5400")
+    ap.add_argument("--expect-range", nargs=2, type=float, default=None, metavar=("MIN", "MAX"),
+                    help="assert the auto-B&C display range matches this pair within 0.01 "
+                         "(e.g. MANUAL_RANGE above); omit to just print the observed range")
     args = ap.parse_args()
 
+    DS = Path(args.dataset)
+    MANUAL = DS / "caiman"
+
     cfg = config.load_config(DS)
-    out = Path(tempfile.mkdtemp(prefix="orgpipe_fiji_verify_"))
+    out = Path(tempfile.mkdtemp(prefix="assembloid_sync_fiji_verify_"))
     print("output ->", out)
     n = stage_fiji.split(DS / "denoised_movie_reconstructed.tif", out,
                          "denoised_movie_reconstructed", cfg, timeout_s=3600)
@@ -33,9 +42,12 @@ def main():
 
     with tifffile.TiffFile(str(out / "denoised_movie_reconstructed0000.tif")) as t:
         m = t.imagej_metadata
-    drift = max(abs(m["min"] - MANUAL_RANGE[0]), abs(m["max"] - MANUAL_RANGE[1]))
-    print("display range: (%.8f, %.8f)  drift vs manual: %.3g" % (m["min"], m["max"], drift))
-    assert drift < 0.01, "auto_bc no longer replicates the manual Auto B&C"
+    if args.expect_range is not None:
+        drift = max(abs(m["min"] - args.expect_range[0]), abs(m["max"] - args.expect_range[1]))
+        print("display range: (%.8f, %.8f)  drift vs expected: %.3g" % (m["min"], m["max"], drift))
+        assert drift < 0.01, "auto_bc no longer replicates the expected Auto B&C range"
+    else:
+        print("display range: (%.8f, %.8f)" % (m["min"], m["max"]))
 
     check = range(n) if args.frames == 0 else range(min(args.frames, n))
     bad = 0

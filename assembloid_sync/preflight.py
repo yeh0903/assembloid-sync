@@ -19,8 +19,12 @@ def check(ds, cfg, needs_space=True):
         ET.parse(str(layout.experiment_xml(ds)))
     except Exception as e:
         errs.append("Experiment.xml unreadable: %s" % e)
-    if not Path(cfg["fiji"]["imagej_exe"]).exists():
-        errs.append("ImageJ not found: %s" % cfg["fiji"]["imagej_exe"])
+    imagej_exe = config.resolve_imagej(cfg)
+    if imagej_exe is None:
+        errs.append("ImageJ/Fiji not found - set fiji.imagej_exe in "
+                    "config.local.json or the ASSEMBLOID_SYNC_IMAGEJ env var")
+    elif not imagej_exe.exists():
+        errs.append("ImageJ not found: %s" % imagej_exe)
     if not (config.REPO_ROOT / cfg["suite2p"]["ops_file"]).exists():
         errs.append("ops file missing: %s" % cfg["suite2p"]["ops_file"])
     if needs_space:

@@ -15,8 +15,8 @@ figures are wall clock from logs/state timestamps.
 | suite2p detect+extract combined | **~4 h 40 m** | **~47 s** | the campaign's headline number |
 | ROI analysis (corrSYN + IOSI) | 25 min | ~1–2 min (measured at smoke scale) | vectorized IOSI; real-scale run pending curation |
 
-**End-to-end `orgpipe run`: ~30 minutes** (denoise 13 m + fiji 4.5 m + suite2p 13 m),
-vs ~5.5 h manual. Curation remains human; `orgpipe analyze` adds minutes.
+**End-to-end `assembloid-sync run`: ~30 minutes** (denoise 13 m + fiji 4.5 m + suite2p 13 m),
+vs ~5.5 h manual. Curation remains human; `assembloid-sync analyze` adds minutes.
 
 Notable: suite2p is now dominated by tif→binary conversion over the network share
 (94 % of its runtime). If that ever matters, `fast_disk` pointing at a local SSD or
@@ -24,4 +24,4 @@ feeding suite2p the BigTIFF directly (`tiff_list`) are the levers — deliberate
 taken now, to keep the manual-equivalent data path.
 
 GPU evidence per run: `[suite2p] torch 2.6.0+cu124 cuda_available=True` in
-`<ds>/.orgpipe/logs/suite2p.log`; detection block shows Cellpose mask timing.
+`<ds>/.assembloid-sync/logs/suite2p.log`; detection block shows Cellpose mask timing.

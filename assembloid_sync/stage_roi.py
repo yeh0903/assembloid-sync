@@ -100,7 +100,7 @@ def run(ds, cfg, smoke=False):
               % (k, good[k].size, idx[k].size, r["amp_min_z"]))
     if good[0].size == 0 or good[1].size == 0:
         raise RuntimeError("an organoid has 0 surviving ROIs - tune amp_min_z "
-                           "in %s/orgpipe.json" % ds)
+                           "in %s/assembloid-sync.json" % ds)
 
     order_full = np.concatenate([good[0], good[1]])
     corr_full = np.corrcoef(dfz[order_full])

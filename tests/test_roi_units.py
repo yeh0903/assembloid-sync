@@ -1,5 +1,5 @@
 import numpy as np
-from orgpipe.stage_roi import compute_dfz, cross_corr, select_good, split_organoids
+from assembloid_sync.stage_roi import compute_dfz, cross_corr, select_good, split_organoids
 
 
 def test_cross_corr_matches_corrcoef_loop():
@@ -44,7 +44,7 @@ def test_select_good_orders_by_latency():
 
 
 def test_sca_reference_importable_and_runs_small():
-    from orgpipe._sca_reference import calculate_synchronicity_index
+    from assembloid_sync._sca_reference import calculate_synchronicity_index
     rng = np.random.default_rng(3)
     traces = rng.random((10, 300))
     corr = np.corrcoef(traces)
@@ -53,7 +53,7 @@ def test_sca_reference_importable_and_runs_small():
 
 
 def test_iosi_runs_and_reports_keys():
-    from orgpipe.sync import calculate_inter_organoid_index
+    from assembloid_sync.sync import calculate_inter_organoid_index
     rng = np.random.default_rng(4)
     res = calculate_inter_organoid_index(rng.random((6, 300)), rng.random((5, 300)),
                                          n_surrogates=3, verbose=False)

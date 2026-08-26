@@ -1,7 +1,7 @@
 import os
 import time
 from pathlib import Path
-from orgpipe import layout
+from assembloid_sync import layout
 
 
 def test_paths(tmp_path):
@@ -10,9 +10,9 @@ def test_paths(tmp_path):
     assert layout.denoised_tif(ds).name == "denoised_movie_reconstructed.tif"
     assert layout.caiman_dir(ds) == ds / "caiman"
     assert layout.plane0(ds) == ds / "caiman" / "suite2p" / "plane0"
-    assert layout.state_path(ds) == ds / ".orgpipe" / "state.json"
-    assert layout.caiman_temp(ds) == ds / ".orgpipe" / "caiman_temp"
-    assert layout.logs_dir(ds) == ds / ".orgpipe" / "logs"
+    assert layout.state_path(ds) == ds / ".assembloid-sync" / "state.json"
+    assert layout.caiman_temp(ds) == ds / ".assembloid-sync" / "caiman_temp"
+    assert layout.logs_dir(ds) == ds / ".assembloid-sync" / "logs"
 
 
 def test_is_b3():

@@ -7,16 +7,26 @@ REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "notebooks"
 OUT.mkdir(exist_ok=True)
 
-BOOT = """\
-DATASET = r"Z:\\Joseph\\250528_B2_003"   # <-- point at your dataset folder
-
-import sys
-sys.path.insert(0, r"Z:\\Joseph\\orgpipe")
+BOOT = '''\
+import os, sys
 from pathlib import Path
-from orgpipe import config, layout
+
+# Locate the repo from the notebook's working directory (works anywhere).
+for _c in (Path.cwd(), *Path.cwd().parents):
+    if (_c / "assembloid_sync" / "__init__.py").exists():
+        sys.path.insert(0, str(_c)); break
+else:
+    raise SystemExit("Run this notebook from inside the repo, or add it to sys.path manually")
+
+# Point this at your dataset folder (or set ASSEMBLOID_SYNC_DATASET):
+DATASET = os.environ.get("ASSEMBLOID_SYNC_DATASET", "")
+if not DATASET:
+    raise SystemExit("Set DATASET above, or the ASSEMBLOID_SYNC_DATASET environment variable")
+
+from assembloid_sync import config, layout
 ds = Path(DATASET)
 cfg = config.load_config(ds)
-print("frame rate:", config.resolve_frame_rate(ds, cfg))"""
+print("dataset:", ds.name, "| frame rate:", config.resolve_frame_rate(ds, cfg))'''
 
 
 def nb(cells, path):
@@ -34,14 +44,14 @@ SMOKE = False
 import os
 temp = layout.caiman_temp(ds); temp.mkdir(parents=True, exist_ok=True)
 os.environ["CAIMAN_TEMP"] = str(temp)
-from orgpipe import stage_denoise
+from assembloid_sync import stage_denoise
 cnm = stage_denoise.fit(ds, cfg, smoke=SMOKE)""",
     """\
 # --- inspect components (the old notebook's cell 3, interactive-only) ---
 import matplotlib.pyplot as plt
 import caiman as cm
 n_preview = 300 if SMOKE else 1000
-movie = cm.load(str(layout.orgpipe_dir(ds) / "smoke_input.tif") if SMOKE
+movie = cm.load(str(layout.state_dir(ds) / "smoke_input.tif") if SMOKE
                 else str(layout.raw_tif(ds)), subindices=range(0, n_preview))
 corr_img = movie.local_correlations(swap_dim=False)
 if cnm.estimates.idx_components is not None and len(cnm.estimates.idx_components):
@@ -58,7 +68,7 @@ nb([
     BOOT,
     """\
 # --- load + organoid split ---
-from orgpipe import stage_roi, plots
+from assembloid_sync import stage_roi, plots
 import matplotlib.pyplot as plt
 F, Fneu, stat = stage_roi.load_plane0(ds)
 idx, xy, labels = stage_roi.split_organoids(stat)
@@ -66,7 +76,7 @@ plots.gmm_scatter(xy, labels, str(ds / "assembloid_demo.jpg"))
 print({0: idx[0].size, 1: idx[1].size})""",
     """\
 # --- dF/F z-scores + TUNING: look at these histograms, then set amp_min_z /
-# burst_z in <dataset>/orgpipe.json, then re-run the FIRST cell and this one ---
+# burst_z in <dataset>/assembloid-sync.json, then re-run the FIRST cell and this one ---
 r = cfg["roi"]
 dfz = stage_roi.compute_dfz(F, Fneu, r["neuropil_r"], r["baseline_pctl"])
 fig = plots.amp_histograms(dfz); plt.show()""",
@@ -80,6 +90,6 @@ for k in (0, 1):
     print("organoid", k, ":", good[k].size, "kept")
     fig = plots.trace_stack(dfz, order[k]); plt.show()""",
     """\
-# --- full analysis (same code path as `orgpipe analyze`) ---
+# --- full analysis (same code path as `assembloid-sync analyze`) ---
 bundle = stage_roi.run(ds, cfg)""",
 ], OUT / "ROI_analysis.ipynb")

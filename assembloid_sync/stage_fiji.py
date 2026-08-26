@@ -37,7 +37,11 @@ def split(src, outdir, prefix, cfg, timeout_s=None, poll_s=2.0):
     macro = config.REPO_ROOT / "macros" / "split_sequence.ijm"
     arg = "|".join([_fwd(src), _fwd(outdir), prefix,
                     cfg["fiji"]["mode"], str(cfg["fiji"]["saturated"])])
-    proc = subprocess.Popen([cfg["fiji"]["imagej_exe"], "-macro", str(macro), arg])
+    imagej_exe = config.resolve_imagej(cfg)
+    if imagej_exe is None:
+        raise RuntimeError("ImageJ/Fiji not found - set fiji.imagej_exe in "
+                           "config.local.json or the ASSEMBLOID_SYNC_IMAGEJ env var")
+    proc = subprocess.Popen([str(imagej_exe), "-macro", str(macro), arg])
     try:
         deadline = time.monotonic() + timeout_s
         while not sentinel.exists():

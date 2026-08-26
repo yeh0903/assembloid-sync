@@ -1,9 +1,9 @@
-"""orgpipe CLI.
+"""assembloid-sync CLI.
 
-  orgpipe run <ds> [--smoke] [--force] [--no-gui] [--all] [--keep-going]
-  orgpipe analyze <ds> [--assume-curated] [--force] [--all] [--keep-going]
-  orgpipe curate <ds>
-  orgpipe status
+  assembloid-sync run <ds> [--smoke] [--force] [--no-gui] [--all] [--keep-going]
+  assembloid-sync analyze <ds> [--assume-curated] [--force] [--all] [--keep-going]
+  assembloid-sync curate <ds>
+  assembloid-sync status
 """
 import argparse
 import subprocess
@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from orgpipe import config, layout, preflight, state
+from assembloid_sync import config, layout, preflight, state
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
@@ -46,7 +46,7 @@ def _stage(ds, cfg, stage, script, env, extra):
 
 def _targets(args, cfg0):
     if args.all:
-        root = Path(cfg0["data_root"])
+        root = config.resolve_data_root(cfg0)
         return [p for p in sorted(root.iterdir())
                 if p.is_dir()
                 and p.name[:2].isdigit()
@@ -63,7 +63,7 @@ def cmd_run(args, cfg0):
             print("SKIP (B3):", ds.name)
             continue
         if args.all and (layout.plane0(ds) / "F.npy").exists() and not layout.state_path(ds).exists():
-            print("SKIP (historical dataset, no orgpipe state):", ds.name)
+            print("SKIP (historical dataset, no assembloid-sync state):", ds.name)
             continue
         if layout.is_curated(ds) and not args.recurate:
             print("SKIP (curated; rerunning would DESTROY manual curation - pass --recurate to redo):", ds.name)
@@ -93,7 +93,7 @@ def cmd_run(args, cfg0):
                 continue
             sys.exit(1)
         if not args.no_gui and not args.all and not args.smoke:
-            print("\nOpening suite2p GUI - curate cells, save, close. Then: orgpipe analyze %s" % ds.name)
+            print("\nOpening suite2p GUI - curate cells, save, close. Then: assembloid-sync analyze %s" % ds.name)
             rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
                                  cfg["envs"]["suite2p"], "python",
                                  str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
@@ -116,14 +116,14 @@ def cmd_analyze(args, cfg0):
             print("SKIP (B3):", ds.name)
             continue
         if args.all and (layout.plane0(ds) / "F.npy").exists() and not layout.state_path(ds).exists():
-            print("SKIP (historical dataset, no orgpipe state):", ds.name)
+            print("SKIP (historical dataset, no assembloid-sync state):", ds.name)
             continue
         if not state.is_done(ds, "suite2p", smoke=True) and not (layout.plane0(ds) / "F.npy").exists():
             print("SKIP (no suite2p output):", ds.name)
             continue
         if not layout.is_curated(ds) and not args.assume_curated:
             print("REFUSING %s: not curated yet (mtime gate). Curate in the GUI "
-                  "(orgpipe curate %s) or pass --assume-curated." % (ds.name, ds.name))
+                  "(assembloid-sync curate %s) or pass --assume-curated." % (ds.name, ds.name))
             failures.append(ds.name)
             continue
         s2p_smoke = state.read_state(ds)["stages"].get("suite2p", {}).get("smoke", False)
@@ -147,7 +147,7 @@ def cmd_curate(args, cfg0):
         sys.exit(2)
     stat_file = layout.plane0(ds) / "stat.npy"
     if not stat_file.exists():
-        print("No suite2p output at %s - run `orgpipe run %s` first." % (stat_file, ds.name))
+        print("No suite2p output at %s - run `assembloid-sync run %s` first." % (stat_file, ds.name))
         sys.exit(1)
     rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
                          cfg["envs"]["suite2p"], "python",
@@ -157,7 +157,7 @@ def cmd_curate(args, cfg0):
 
 
 def cmd_status(args, cfg0):
-    root = Path(cfg0["data_root"])
+    root = config.resolve_data_root(cfg0)
     print("%-46s %-8s %-6s %-8s %-8s %-5s" % ("dataset", "denoise", "fiji", "suite2p", "curated", "roi"))
     for p in sorted(root.iterdir()):
         if not p.is_dir() or not layout.raw_tif(p).exists():
@@ -175,7 +175,7 @@ def cmd_status(args, cfg0):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="orgpipe")
+    ap = argparse.ArgumentParser(prog="assembloid-sync")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("run", "analyze"):
         p = sub.add_parser(name)

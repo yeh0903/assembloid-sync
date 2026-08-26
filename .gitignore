@@ -4,4 +4,6 @@ __pycache__/
 *.tif
 *.npy
 !settings/*.npy
-.orgpipe/
+.assembloid-sync/
+config.local.json
+.pytest_cache/

@@ -32,8 +32,8 @@ def write_denoised(cnm, out_path, chunk=200):
 
 def make_smoke_input(ds, n_frames=300):
     import tifffile
-    out = layout.orgpipe_dir(ds) / "smoke_input.tif"
-    layout.orgpipe_dir(ds).mkdir(parents=True, exist_ok=True)
+    out = layout.state_dir(ds) / "smoke_input.tif"
+    layout.state_dir(ds).mkdir(parents=True, exist_ok=True)
     with tifffile.TiffFile(str(layout.raw_tif(ds))) as t:
         n = min(n_frames, len(t.pages))
         frames = np.stack([t.pages[i].asarray() for i in range(n)])
@@ -94,7 +94,7 @@ def run(ds, cfg, smoke=False):
     if int(d["nb"]) < 1:
         raise ValueError("denoise.nb must be >= 1 (background terms are required), got %r" % d["nb"])
     cnm = fit(ds, cfg, smoke)
-    checkpoint = layout.orgpipe_dir(ds) / "cnm_fit.hdf5"
+    checkpoint = layout.state_dir(ds) / "cnm_fit.hdf5"
     try:
         cnm.save(str(checkpoint))  # a failed write below is recoverable without re-fitting
         print("[denoise] fit checkpoint -> %s" % checkpoint)

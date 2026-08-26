@@ -1,0 +1,4 @@
+#!/bin/sh
+# Resolves its own location - the repo can live anywhere.
+REPO="$(cd "$(dirname "$0")" && pwd)"
+python "$REPO/bin/pipeline.py" "$@"
