@@ -297,6 +297,8 @@ and skip when already done, so an interrupted run resumes by reissuing the same 
 
 ## Requirements
 
+- Python ≥3.9 on `PATH` for the orchestrator itself (any interpreter — it imports only
+  the standard library; the scientific work happens inside the conda environments)
 - Windows (the Fiji automation and process handling are Windows-specific)
 - conda environments: CaImAn, suite2p (+ a CUDA-torch clone for GPU Cellpose), and an
   analysis env with numpy/scipy/scikit-learn/seaborn/tifffile
@@ -319,6 +321,10 @@ ImageJ/Fiji path all resolve at runtime instead of being hardcoded:
    install locations and then `PATH`.
 3. Run `./assembloid-sync status` (or `assembloid-sync.bat status` on Windows) to
    confirm it finds your datasets.
+
+The wrappers call bare `python`, so it must be on `PATH` — on Windows, an Anaconda/
+Miniconda Prompt (or any activated conda environment) is the easiest way to guarantee
+that.
 
 Two environment variables override the config file, useful for one-off runs or CI:
 `ASSEMBLOID_SYNC_DATA_ROOT` and `ASSEMBLOID_SYNC_IMAGEJ`.

@@ -1,0 +1,4 @@
+* text=auto
+assembloid-sync text eol=lf
+*.bat text eol=crlf
+*.ijm text eol=lf

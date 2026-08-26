@@ -44,9 +44,19 @@ def _stage(ds, cfg, stage, script, env, extra):
                            % (stage, rc, layout.logs_dir(ds) / (stage + ".log")))
 
 
+def _data_root(cfg):
+    root = config.resolve_data_root(cfg)
+    if not root.is_dir():
+        print("Data root does not exist: %s\n"
+              "Set data_root in config.local.json or the ASSEMBLOID_SYNC_DATA_ROOT "
+              "environment variable." % root)
+        sys.exit(2)
+    return root
+
+
 def _targets(args, cfg0):
     if args.all:
-        root = config.resolve_data_root(cfg0)
+        root = _data_root(cfg0)
         return [p for p in sorted(root.iterdir())
                 if p.is_dir()
                 and p.name[:2].isdigit()
@@ -157,7 +167,7 @@ def cmd_curate(args, cfg0):
 
 
 def cmd_status(args, cfg0):
-    root = config.resolve_data_root(cfg0)
+    root = _data_root(cfg0)
     print("%-46s %-8s %-6s %-8s %-8s %-5s" % ("dataset", "denoise", "fiji", "suite2p", "curated", "roi"))
     for p in sorted(root.iterdir()):
         if not p.is_dir() or not layout.raw_tif(p).exists():

@@ -77,3 +77,7 @@ def test_resolve_data_root_falls_back_to_cwd(monkeypatch, tmp_path):
 def test_resolve_imagej_env_var_wins(tmp_path, monkeypatch):
     monkeypatch.setenv(config.ENV_PREFIX + "IMAGEJ", str(tmp_path / "ij.exe"))
     assert config.resolve_imagej({}) == tmp_path / "ij.exe"
+
+
+def test_local_config_isolated_in_tests(tmp_path):
+    assert config.load_config(tmp_path)["data_root"] is None
