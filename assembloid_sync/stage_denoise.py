@@ -50,6 +50,11 @@ def fit(ds, cfg, smoke=False):
     from caiman.source_extraction.cnmf import cnmf as cnmf_mod
     from caiman.source_extraction.cnmf.params import CNMFParams
 
+    import logging
+    logging.basicConfig(
+        format="%(relativeCreated)12d [%(filename)s:%(funcName)20s():%(lineno)s] %(message)s",
+        level=logging.INFO)
+
     fname = make_smoke_input(ds) if smoke else layout.raw_tif(ds)
     fr = _config.resolve_frame_rate(ds, cfg)
     d = cfg["denoise"]
