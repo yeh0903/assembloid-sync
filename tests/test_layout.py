@@ -39,3 +39,11 @@ def test_is_curated(tmp_path):
 
 def test_is_curated_missing(tmp_path):
     assert not layout.is_curated(tmp_path / "nonexistent")
+
+
+def test_is_curated_via_marker(tmp_path):
+    ds = tmp_path / "d"
+    layout.state_dir(ds).mkdir(parents=True)
+    assert not layout.is_curated(ds)
+    layout.curated_marker(ds).write_text("{}", encoding="utf-8")
+    assert layout.is_curated(ds)

@@ -46,13 +46,21 @@ def is_b3(ds):
     return "_b3_" in Path(ds).name.lower()
 
 
-def is_curated(ds, min_gap_s=2.0):
-    """True when iscell.npy was rewritten after suite2p finished.
+def curated_marker(ds):
+    return state_dir(ds) / "curated.json"
 
-    run_s2p writes iscell.npy in the same second as F.npy; human curation in
-    the GUI rewrites it later. mtime(iscell) >= mtime(F) + min_gap_s therefore
-    means a person has been there.
+
+def is_curated(ds, min_gap_s=2.0):
+    """True when a human has curated this dataset's cells.
+
+    Detected either by the marker written when the curation GUI closes, or by
+    iscell.npy having been rewritten well after suite2p wrote F.npy (which also
+    covers curating outside this tool). The marker matters because suite2p's GUI
+    only rewrites iscell.npy when a cell is actually flipped - reviewing the cells
+    and agreeing with the classifier leaves no trace otherwise.
     """
+    if curated_marker(ds).exists():
+        return True
     f = plane0(ds) / "F.npy"
     ic = plane0(ds) / "iscell.npy"
     if not f.exists() or not ic.exists():

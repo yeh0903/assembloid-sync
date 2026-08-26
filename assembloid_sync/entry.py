@@ -3,7 +3,7 @@
 Usage in an entry script:
 
     from assembloid_sync import entry
-    def _run(ds, cfg, smoke):   # heavy imports happen inside _run
+    def _run(ds, cfg):   # heavy imports happen inside _run
         ...
     entry.main("denoise", _run)
 """
@@ -17,7 +17,6 @@ from . import config, layout, state
 def main(stage_name, run_fn):
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset")
-    ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
@@ -31,20 +30,20 @@ def main(stage_name, run_fn):
     if not ds.is_dir():
         print("ERROR: dataset folder does not exist: %s" % ds)
         sys.exit(2)
-    if not args.force and state.is_done(ds, stage_name, smoke=args.smoke):
+    if not args.force and state.is_done(ds, stage_name):
         print("[%s] already done for %s - skipping (--force to redo)" % (stage_name, ds.name))
         sys.exit(0)
 
-    state.mark(ds, stage_name, "running", smoke=args.smoke)
+    state.mark(ds, stage_name, "running")
     removed = state.clear_downstream(ds, stage_name)
     if removed:
         print("[%s] cleared downstream state: %s (their inputs are changing)" % (stage_name, ", ".join(removed)))
     try:
-        run_fn(ds, cfg, args.smoke)
+        run_fn(ds, cfg)
     except Exception:
         tb = traceback.format_exc()
-        state.mark(ds, stage_name, "failed", smoke=args.smoke, error=tb)
+        state.mark(ds, stage_name, "failed", error=tb)
         print(tb, file=sys.stderr)
         sys.exit(1)
-    state.mark(ds, stage_name, "done", smoke=args.smoke)
+    state.mark(ds, stage_name, "done")
     print("[%s] done: %s" % (stage_name, ds.name))

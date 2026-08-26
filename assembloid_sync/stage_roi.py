@@ -82,7 +82,7 @@ def _jsonable(d):
     return out
 
 
-def run(ds, cfg, smoke=False):
+def run(ds, cfg):
     from . import plots
 
     r = cfg["roi"]

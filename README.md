@@ -103,9 +103,13 @@ the multi-hour bottleneck of the original workflow.
 You accept or reject cells. This is the one irreducibly manual step, and the pipeline is
 built around it rather than pretending it away.
 
-The pipeline detects that curation happened by comparing modification times: suite2p
-writes `iscell.npy` in the same second as `F.npy`, while curation rewrites it later.
-`analyze` refuses to run until that gap appears (override with `--assume-curated`).
+Curation is recorded explicitly: `assembloid-sync run`/`curate` writes a marker
+(`.assembloid-sync/curated.json`) once the suite2p GUI is closed. As a fallback for
+curating outside this tool, the pipeline also detects curation by comparing
+modification times: suite2p writes `iscell.npy` in the same second as `F.npy`, while
+curation rewrites it later. `analyze` refuses to run until one of those signals appears
+(override with `--assume-curated`). A suite2p rerun clears the marker, since detection
+is being redone and any prior curation decision no longer applies.
 
 ### 5. Analysis — `code` env
 
@@ -242,13 +246,24 @@ dataset's `assembloid-sync.json`.
 
 | flag | effect |
 |---|---|
-| `--smoke` | run the whole chain on the first 300 frames (minutes, not hours) |
 | `--force` | redo stages already marked done |
 | `--recurate` | permit rerunning a dataset whose cells were already curated |
 | `--no-gui` | do not open the curation GUI at the end of `run` |
 | `--all` | every eligible dataset under `data_root` |
 | `--keep-going` | continue to the next dataset after a failure |
 | `--assume-curated` | bypass the curation check |
+
+### Trying it on a small dataset
+
+`tools/make_test_dataset.py` truncates a real dataset's raw movie into a small,
+ordinary dataset folder. It runs through the normal pipeline with no special flags, and
+because it is its own folder with its own filenames, it can never collide with or
+overwrite a real run's output:
+
+```bash
+python tools/make_test_dataset.py <source-dataset> <destination> --frames 300
+assembloid-sync run <destination>
+```
 
 ### Safety rails
 

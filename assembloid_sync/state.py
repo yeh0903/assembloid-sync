@@ -27,23 +27,19 @@ def write_state(ds, st):
     os.replace(str(tmp), str(p))
 
 
-def mark(ds, stage, status, smoke=False, error=None):
+def mark(ds, stage, status, error=None):
     st = read_state(ds)
     st["stages"][stage] = {
         "status": status,
-        "smoke": bool(smoke),
         "at": datetime.datetime.now().isoformat(timespec="seconds"),
         "error": error,
     }
     write_state(ds, st)
 
 
-def is_done(ds, stage, smoke=False):
-    """done, and a real run satisfies a smoke ask but not vice versa."""
-    r = read_state(ds)["stages"].get(stage, {})
-    if r.get("status") != "done":
-        return False
-    return (not r.get("smoke", False)) or smoke
+def is_done(ds, stage):
+    """True if the stage's last recorded run finished successfully."""
+    return read_state(ds)["stages"].get(stage, {}).get("status") == "done"
 
 
 DOWNSTREAM = {

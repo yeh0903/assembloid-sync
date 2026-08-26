@@ -23,7 +23,7 @@ def build_ops(ds, cfg, fs):
     return ops, db, diffs
 
 
-def run(ds, cfg, smoke=False):
+def run(ds, cfg):
     fs = _config.resolve_frame_rate(ds, cfg)
     ops, db, diffs = build_ops(ds, cfg, fs)
     print("[suite2p] ops diffs vs %s:" % cfg["suite2p"]["ops_file"])
@@ -35,6 +35,10 @@ def run(ds, cfg, smoke=False):
         print("[suite2p] removing stale output %s (run_s2p would silently reuse its binaries)" % s2p_out)
         if layout.is_curated(ds):
             print("[suite2p] WARNING: discarding human curation in %s" % s2p_out)
+        marker = layout.curated_marker(ds)
+        if marker.exists():
+            marker.unlink()
+            print("[suite2p] cleared curation marker (detection is being redone)")
         try:
             shutil.rmtree(str(s2p_out))
         except PermissionError:

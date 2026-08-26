@@ -6,9 +6,9 @@ os.environ.setdefault("MPLBACKEND", "Agg")  # headless batch; notebooks stay inl
 from assembloid_sync import entry
 
 
-def _run(ds, cfg, smoke):
+def _run(ds, cfg):
     from assembloid_sync import stage_roi
-    stage_roi.run(ds, cfg, smoke)
+    stage_roi.run(ds, cfg)
 
 
 if __name__ == "__main__":

@@ -67,6 +67,6 @@ def split(src, outdir, prefix, cfg, timeout_s=None, poll_s=2.0):
     return n_out
 
 
-def run(ds, cfg, smoke=False):
+def run(ds, cfg):
     n = split(layout.denoised_tif(ds), layout.caiman_dir(ds), layout.SEQ_PREFIX, cfg)
     print("[fiji] %d frames -> %s" % (n, layout.caiman_dir(ds)))

@@ -1,11 +1,13 @@
 """assembloid-sync CLI.
 
-  assembloid-sync run <ds> [--smoke] [--force] [--no-gui] [--all] [--keep-going]
+  assembloid-sync run <ds> [--force] [--no-gui] [--all] [--keep-going]
   assembloid-sync analyze <ds> [--assume-curated] [--force] [--all] [--keep-going]
   assembloid-sync curate <ds>
   assembloid-sync status
 """
 import argparse
+import datetime
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -65,6 +67,22 @@ def _targets(args, cfg0):
     return [config.resolve_dataset(args.dataset, cfg0)]
 
 
+def _launch_gui(ds, cfg):
+    """Open the curation GUI and record that a human reviewed this dataset."""
+    rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
+                         cfg["envs"]["suite2p"], "python",
+                         str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
+    if rc != 0:
+        print("suite2p GUI failed to launch (exit %d) - check the suite2p env" % rc)
+        return rc
+    marker = layout.curated_marker(ds)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(json.dumps(
+        {"at": datetime.datetime.now().isoformat(timespec="seconds")}), encoding="utf-8")
+    print("[curate] recorded curation for %s" % ds.name)
+    return rc
+
+
 def cmd_run(args, cfg0):
     failures = []
     for ds in _targets(args, cfg0):
@@ -80,7 +98,7 @@ def cmd_run(args, cfg0):
             if not args.all:
                 sys.exit(1)
             continue
-        errs = preflight.check(ds, cfg, needs_space=args.force or not state.is_done(ds, "suite2p", args.smoke))
+        errs = preflight.check(ds, cfg, needs_space=args.force or not state.is_done(ds, "suite2p"))
         for env in {cfg["envs"]["caiman"], cfg["envs"]["suite2p"]}:
             e = preflight.check_env(env)
             if e:
@@ -91,7 +109,7 @@ def cmd_run(args, cfg0):
             if args.keep_going:
                 continue
             sys.exit(1)
-        extra = (["--smoke"] if args.smoke else []) + (["--force"] if args.force else [])
+        extra = ["--force"] if args.force else []
         try:
             _stage(ds, cfg, "denoise", "run_denoise.py", cfg["envs"]["caiman"], extra)
             _stage(ds, cfg, "fiji", "run_fiji.py", "base", extra)
@@ -102,13 +120,9 @@ def cmd_run(args, cfg0):
             if args.keep_going:
                 continue
             sys.exit(1)
-        if not args.no_gui and not args.all and not args.smoke:
+        if not args.no_gui and not args.all:
             print("\nOpening suite2p GUI - curate cells, save, close. Then: assembloid-sync analyze %s" % ds.name)
-            rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
-                                 cfg["envs"]["suite2p"], "python",
-                                 str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
-            if rc != 0:
-                print("suite2p GUI failed to launch (exit %d) - check the suite2p env" % rc)
+            _launch_gui(ds, cfg)
     if failures:
         print("\nFAILED datasets:", ", ".join(failures))
         sys.exit(1)
@@ -128,7 +142,7 @@ def cmd_analyze(args, cfg0):
         if args.all and (layout.plane0(ds) / "F.npy").exists() and not layout.state_path(ds).exists():
             print("SKIP (historical dataset, no assembloid-sync state):", ds.name)
             continue
-        if not state.is_done(ds, "suite2p", smoke=True) and not (layout.plane0(ds) / "F.npy").exists():
+        if not state.is_done(ds, "suite2p") and not (layout.plane0(ds) / "F.npy").exists():
             print("SKIP (no suite2p output):", ds.name)
             continue
         if not layout.is_curated(ds) and not args.assume_curated:
@@ -136,8 +150,7 @@ def cmd_analyze(args, cfg0):
                   "(assembloid-sync curate %s) or pass --assume-curated." % (ds.name, ds.name))
             failures.append(ds.name)
             continue
-        s2p_smoke = state.read_state(ds)["stages"].get("suite2p", {}).get("smoke", False)
-        extra = (["--smoke"] if s2p_smoke else []) + (["--force"] if args.force else [])
+        extra = ["--force"] if args.force else []
         try:
             _stage(ds, cfg, "roi", "run_roi.py", cfg["envs"]["code"], extra)
         except RuntimeError as e:
@@ -159,11 +172,7 @@ def cmd_curate(args, cfg0):
     if not stat_file.exists():
         print("No suite2p output at %s - run `assembloid-sync run %s` first." % (stat_file, ds.name))
         sys.exit(1)
-    rc = subprocess.run(["conda", "run", "--no-capture-output", "-n",
-                         cfg["envs"]["suite2p"], "python",
-                         str(BIN / "run_suite2p.py"), "--gui", str(ds)]).returncode
-    if rc != 0:
-        print("suite2p GUI failed to launch (exit %d) - check the suite2p env" % rc)
+    _launch_gui(ds, cfg)
 
 
 def cmd_status(args, cfg0):
@@ -175,13 +184,10 @@ def cmd_status(args, cfg0):
         if layout.is_b3(p):
             continue
         def s(stage):
-            r = state.read_state(p)["stages"].get(stage, {})
-            v = r.get("status", "-")
-            return v + ("*" if r.get("smoke") else "")
+            return state.read_state(p)["stages"].get(stage, {}).get("status", "-")
         print("%-46s %-8s %-6s %-8s %-8s %-5s"
               % (p.name[:45], s("denoise"), s("fiji"), s("suite2p"),
                  "yes" if layout.is_curated(p) else "-", s("roi")))
-    print("(* = smoke run)")
 
 
 def main():
@@ -194,7 +200,6 @@ def main():
         p.add_argument("--force", action="store_true")
         p.add_argument("--keep-going", action="store_true")
         if name == "run":
-            p.add_argument("--smoke", action="store_true")
             p.add_argument("--no-gui", action="store_true")
             p.add_argument("--recurate", action="store_true")
         else:

@@ -39,20 +39,19 @@ def nb(cells, path):
 nb([
     BOOT,
     """\
-# --- run CNMF-E (identical to the batch stage; SMOKE=True for a 300-frame test) ---
-SMOKE = False
+# --- run CNMF-E (identical to the batch stage) ---
 import os
 temp = layout.caiman_temp(ds); temp.mkdir(parents=True, exist_ok=True)
 os.environ["CAIMAN_TEMP"] = str(temp)
 from assembloid_sync import stage_denoise
-cnm = stage_denoise.fit(ds, cfg, smoke=SMOKE)""",
+cnm = stage_denoise.fit(ds, cfg)""",
     """\
 # --- inspect components (the old notebook's cell 3, interactive-only) ---
 import matplotlib.pyplot as plt
 import caiman as cm
-n_preview = 300 if SMOKE else 1000
-movie = cm.load(str(layout.state_dir(ds) / "smoke_input.tif") if SMOKE
-                else str(layout.raw_tif(ds)), subindices=range(0, n_preview))
+# first 1000 frames is plenty for a correlation-image preview; if this recording
+# is shorter than that, narrow the range below.
+movie = cm.load(str(layout.raw_tif(ds)), subindices=range(0, 1000))
 corr_img = movie.local_correlations(swap_dim=False)
 if cnm.estimates.idx_components is not None and len(cnm.estimates.idx_components):
     cnm.estimates.plot_contours(img=corr_img, idx=cnm.estimates.idx_components)

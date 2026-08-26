@@ -4,9 +4,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from assembloid_sync import entry
 
 
-def _run(ds, cfg, smoke):
+def _run(ds, cfg):
     from assembloid_sync import stage_suite2p
-    stage_suite2p.run(ds, cfg, smoke)
+    stage_suite2p.run(ds, cfg)
 
 
 if __name__ == "__main__":   # Windows spawn re-executes this module in every

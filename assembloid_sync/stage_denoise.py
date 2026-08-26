@@ -30,18 +30,7 @@ def write_denoised(cnm, out_path, chunk=200):
     return T
 
 
-def make_smoke_input(ds, n_frames=300):
-    import tifffile
-    out = layout.state_dir(ds) / "smoke_input.tif"
-    layout.state_dir(ds).mkdir(parents=True, exist_ok=True)
-    with tifffile.TiffFile(str(layout.raw_tif(ds))) as t:
-        n = min(n_frames, len(t.pages))
-        frames = np.stack([t.pages[i].asarray() for i in range(n)])
-    tifffile.imwrite(str(out), frames)
-    return out
-
-
-def fit(ds, cfg, smoke=False):
+def fit(ds, cfg):
     """Run CNMF-E exactly as denoise.ipynb cells 0-2. Returns the fitted cnm.
 
     Caller (bin/run_denoise.py) must set CAIMAN_TEMP before this import runs.
@@ -55,7 +44,7 @@ def fit(ds, cfg, smoke=False):
         format="%(relativeCreated)12d [%(filename)s:%(funcName)20s():%(lineno)s] %(message)s",
         level=logging.INFO)
 
-    fname = make_smoke_input(ds) if smoke else layout.raw_tif(ds)
+    fname = layout.raw_tif(ds)
     fr = _config.resolve_frame_rate(ds, cfg)
     d = cfg["denoise"]
     params_dict = {
@@ -92,13 +81,13 @@ def fit(ds, cfg, smoke=False):
     return cnm
 
 
-def run(ds, cfg, smoke=False):
+def run(ds, cfg):
     d = cfg["denoise"]
     if int(d["chunk_size"]) < 1:
         raise ValueError("denoise.chunk_size must be >= 1, got %r" % d["chunk_size"])
     if int(d["nb"]) < 1:
         raise ValueError("denoise.nb must be >= 1 (background terms are required), got %r" % d["nb"])
-    cnm = fit(ds, cfg, smoke)
+    cnm = fit(ds, cfg)
     checkpoint = layout.state_dir(ds) / "cnm_fit.hdf5"
     try:
         cnm.save(str(checkpoint))  # a failed write below is recoverable without re-fitting
