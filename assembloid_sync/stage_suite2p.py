@@ -46,7 +46,18 @@ def run(ds, cfg):
             raise
     try:
         import torch
-        print("[suite2p] torch %s cuda_available=%s" % (torch.__version__, torch.cuda.is_available()))
+        cuda = torch.cuda.is_available()
+        print("[suite2p] torch %s cuda_available=%s" % (torch.__version__, cuda))
+        if not cuda:
+            print("[suite2p] " + "!" * 62)
+            print("[suite2p] WARNING: Cellpose detection will run on the CPU.")
+            print("[suite2p]   This is the slow path - seconds on a GPU versus hours on CPU.")
+            print("[suite2p]   The environment files install the CPU build of torch by")
+            print("[suite2p]   default, because the CUDA wheel is only on PyTorch's own")
+            print("[suite2p]   index. To enable the GPU, see docs/SETUP.md section 5:")
+            print("[suite2p]     pip install torch --index-url https://download.pytorch.org/whl/cu124")
+            print("[suite2p]     python tools/patch_suite2p_gpu.py <env-name>")
+            print("[suite2p] " + "!" * 62)
     except ImportError:
         pass
     from suite2p import run_s2p
