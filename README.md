@@ -172,6 +172,10 @@ IOSI = (observed − surrogate_mean) / (1 − surrogate_mean)   if observed > me
 reported with a z-score and p-value. A z-score above 2 means the two organoids are
 coupled beyond chance.
 
+Full formulas, the surrogate-generation method (including why it's a deliberate,
+simplified variant of AAFT rather than a port of FluoroSNNAP's `AAFTsur.m`), and the
+measured fidelity to the MATLAB original live in [docs/METHODS.md](docs/METHODS.md).
+
 ---
 
 ## Outputs
@@ -297,11 +301,11 @@ assembloid_sync/
 ├── stage_fiji.py               subprocess only
 ├── stage_suite2p.py            imports suite2p  (function-local)
 ├── stage_roi.py  sync.py  plots.py   imports sklearn/scipy/seaborn
-└── _sca_reference.py   GENERATED verbatim from the original analysis notebook
+└── _sca_reference.py   SCA, ported from FluoroSNNAP's MATLAB - see docs/METHODS.md
 bin/         entry script per stage + the orchestrator
 macros/      the ImageJ macro
 notebooks/   interactive figure workflow (one copy, dataset as a variable)
-tools/       reference extractor, notebook generator, Fiji equivalence check
+tools/       notebook generator, Fiji equivalence check
 ```
 
 Every heavy dependency is imported *inside a function*, so any module can be imported
@@ -364,9 +368,11 @@ than asserted:
 - the chunked writer is byte-equal to the original full-array reconstruction
 - suite2p receives an ops dict differing from the archived settings in exactly
   `{fs, tau, data_path, save_path0}`, enforced by a test
-- the synchronization analysis is extracted from the original notebook by AST and
-  verified identical node-for-node; the vectorized cross-correlation is pinned against
-  the original loop to 1e-10
+- the synchronization analysis was originally extracted from the reference notebook by
+  AST and verified identical node-for-node; `_sca_reference.py` is now a directly
+  maintained source file with one intentional fix (a cluster-size off-by-one — see
+  [docs/METHODS.md](docs/METHODS.md#7-fidelity-to-the-matlab-original)). The vectorized
+  cross-correlation is still pinned against the original loop to 1e-10
 - ROI counts reproduce the reference dataset's curated cell count exactly
 
 Design rationale and decision history: [`docs/superpowers/specs/`](docs/superpowers/specs/)
@@ -375,6 +381,9 @@ and [`docs/superpowers/plans/`](docs/superpowers/plans/).
 ---
 
 ## References
+
+Full method formulas, the surrogate-data audit, and the line-by-line fidelity check
+against FluoroSNNAP's MATLAB are in [docs/METHODS.md](docs/METHODS.md).
 
 **Tools this pipeline runs**
 
