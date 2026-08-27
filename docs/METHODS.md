@@ -17,7 +17,7 @@ F, Fneu, stat  (suite2p output, curated ROIs only)
      │                              │
      │ fluorescence                 │ spatial: ROI centroid ("med")
      ▼                              ▼
-   dFz = zscore(ΔF/F)      split_organoids(stat)   ← GMM + Mahalanobis, position only
+   dFz = zscore(ΔF/F)      split_organoids(stat, cfg)   ← gmm/density/axis, position only
      │                              │
      └──────────────┬───────────────┘
                      ▼
@@ -43,13 +43,50 @@ chance," not just "correlated."
 
 **Design constraint: the organoid split must be spatial only.** `split_organoids`
 (`assembloid_sync/stage_roi.py`) clusters ROI centroid position — `stat[i]["med"]`,
-pixel (x, y) — with a 2-component Gaussian mixture, then reassigns boundary cases by
-Mahalanobis distance. It never sees `F`, `Fneu`, or `dFz`. This has to hold: if the
-split used activity or correlation instead, IOSI would be measuring coupling between
-two groups that were *defined* by their activity relationship, which makes "are the
-organoids synchronized" circular — the answer would be baked into the grouping. Keeping
-the split purely spatial is what makes IOSI an empirical question instead of a
-tautology.
+pixel (x, y). It never sees `F`, `Fneu`, or `dFz`, under any of its methods (below).
+This has to hold: if the split used activity or correlation instead, IOSI would be
+measuring coupling between two groups that were *defined* by their activity
+relationship, which makes "are the organoids synchronized" circular — the answer would
+be baked into the grouping. Keeping the split purely spatial is what makes IOSI an
+empirical question instead of a tautology.
+
+**Three interchangeable split methods**, selected by `roi.split.method` in config
+(default `"gmm"`; see `defaults.json`'s `_split_note` and the README's "Analysis
+thresholds" section):
+
+- **`gmm`** — a 2-component Gaussian mixture (full covariance, 10 initializations,
+  fixed seed) fit to the centroids, then a Mahalanobis reassignment of every ROI to
+  whichever component it's actually closer to. This is a likelihood fit over the whole
+  field of view, so it's correct when the two organoids are one fused mass joined at a
+  neck — most datasets. It has no notion of "this handful of ROIs is a separate body,"
+  though: a small fragment gets absorbed into whichever Gaussian component the overall
+  point cloud fits best, rather than isolated as its own group.
+- **`density`** — DBSCAN (`roi.split.eps`, default 40 px) finds the two largest
+  connected cores in the point cloud and uses them as seeds; every ROI joins whichever
+  seed it's spatially nearest to. Use this when the two bodies are genuinely spatially
+  separated in the field of view, including a frame-edge fragment of a second organoid
+  that a likelihood fit would absorb into the first instead of isolating. Falls back to
+  `gmm` (with a console warning, recorded in `info["method"]` vs.
+  `info["requested_method"]`) when DBSCAN finds fewer than two cores — e.g. one
+  continuous fused mass.
+- **`axis`** — an explicit straight-line cut along `roi.split.axis` (`"x"` or `"y"`) at
+  pixel `roi.split.threshold` (defaults to the median). This is the manual override for
+  when neither automatic method gets a field of view right: look at
+  `assembloid_demo.jpg` against the anatomy, find the real dividing line, and pin it in
+  that dataset's `assembloid-sync.json`.
+
+Whichever method runs, label 0 is then forced to be the upper group (smaller mean y).
+
+**`density_dip`** — reported per split in `info` and in `roi_results.json`'s `split`
+block — measures whether there is an actual gap in ROI density between the two assigned
+groups: project the centroids onto the axis connecting the two group means, histogram
+that projection, and compare the minimum bin count *between* the groups to the bin
+counts at their edges. 0.0 means a genuinely empty gap; values near 1 mean one
+continuous mass with a line drawn through it. **Read that the right way round: a high
+`density_dip` is the expected, normal result for a fused assembloid**, which has no
+physical gap between its two halves by construction. It is a diagnostic to look at
+alongside `assembloid_demo.jpg`, not a pass/fail test — a fused dataset scoring near 1.0
+is not a sign anything is wrong.
 
 corrSYN uses a **balanced subsample** (equal ROI counts drawn from each organoid) so
 the larger organoid can't dominate the eigen-spectrum. IOSI doesn't need that — it's

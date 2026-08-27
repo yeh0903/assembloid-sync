@@ -6,13 +6,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def gmm_scatter(xy, labels, save_path):
+def split_overlay(xy, labels, save_path, background=None, info=None):
+    """ROI centroids coloured by organoid, over the anatomy when available.
+
+    The background is what makes a wrong split obvious at a glance.
+    """
+    labels = np.asarray(labels)
     fig, ax = plt.subplots()
-    ax.scatter(xy[:, 0], xy[:, 1], c=labels, cmap="Dark2", s=40)
-    ax.invert_yaxis()
+    if background is not None:
+        lo, hi = np.percentile(background, [1, 99.5])
+        ax.imshow(background, cmap="gray", vmin=lo, vmax=hi)
+    else:
+        ax.invert_yaxis()
+    colors = ["#1b9e77" if l == 0 else "#d95f02" for l in labels]
+    ax.scatter(xy[:, 0], xy[:, 1], c=colors, s=14, edgecolors="none")
     ax.set_aspect("equal")
     ax.set_xticks([]); ax.set_yticks([])
-    ax.set_title("Upper vs lower organoid")
+    n0, n1 = int((labels == 0).sum()), int((labels == 1).sum())
+    title = "Organoid A (upper) %d  |  Organoid B (lower) %d" % (n0, n1)
+    if info is not None:
+        title += "\nmethod=%s  density_dip=%.2f  cores=%d" % (
+            info.get("method"), info.get("density_dip", float("nan")),
+            info.get("n_density_cores", -1))
+    ax.set_title(title)
     fig.savefig(save_path)
     plt.close(fig)
 

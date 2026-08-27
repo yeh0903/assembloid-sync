@@ -17,5 +17,7 @@
   "suite2p": { "ops_file": "settings/suite2p_ops.npy", "tau": 1.0, "ops_overrides": {} },
   "roi": { "neuropil_r": 0.4, "baseline_pctl": 8, "amp_min_z": 3.75, "burst_z": 2.5,
            "min_gap_fr": 3, "n_surrogates": 200, "sca_min_cluster_size": 3,
-           "sca_significance_threshold": 2.0, "seed": 0 }
+           "sca_significance_threshold": 2.0, "seed": 0,
+           "split": { "method": "gmm", "eps": 40, "axis": "x", "threshold": null } },
+  "_split_note": "method is gmm (default, correct for fused assembloids), density (two spatially separated bodies - use when GMM absorbs a small body instead of isolating it), or axis (explicit cut; set axis to x or y and threshold to a pixel coordinate). Check assembloid_demo.jpg against the anatomy after any run."
 }

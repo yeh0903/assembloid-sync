@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from assembloid_sync.stage_roi import compute_dfz, cross_corr, select_good, split_organoids
 
 
@@ -18,7 +19,7 @@ def test_split_organoids_two_blobs():
     upper = rng.normal([100, 100], 5, (30, 2))   # (x, y): smaller y = upper
     lower = rng.normal([300, 400], 5, (40, 2))
     stat = [{"med": (y, x)} for x, y in np.vstack([upper, lower])]  # med is (row, col)
-    idx, xy, labels = split_organoids(stat)
+    idx, xy, labels, info = split_organoids(stat)
     assert set(idx) == {0, 1}
     assert len(idx[0]) == 30 and len(idx[1]) == 40   # label 0 = upper cluster
 
@@ -59,3 +60,29 @@ def test_iosi_runs_and_reports_keys():
                                          n_surrogates=3, verbose=False)
     for k in ("IOSI", "IOSI_mean", "z_score", "p_value", "significant"):
         assert k in res
+
+
+def test_split_axis_method():
+    xy = np.array([[10.0, 50.0]] * 5 + [[200.0, 50.0]] * 20)
+    stat = [{"med": (p[1], p[0])} for p in xy]
+    cfg = {"roi": {"split": {"method": "axis", "axis": "x", "threshold": 100}}}
+    idx, _, labels, info = split_organoids(stat, cfg)
+    assert info["method"] == "axis"
+    assert sorted([idx[0].size, idx[1].size]) == [5, 20]
+
+
+def test_split_density_isolates_small_body():
+    rng = np.random.default_rng(0)
+    big = rng.normal([300, 300], 25, (200, 2))
+    small = rng.normal([60, 300], 8, (10, 2))
+    xy = np.vstack([big, small])
+    stat = [{"med": (p[1], p[0])} for p in xy]
+    idx, _, labels, info = split_organoids(stat, {"roi": {"split": {"method": "density"}}})
+    assert info["method"] == "density"
+    assert sorted([idx[0].size, idx[1].size]) == [10, 200]
+
+
+def test_split_unknown_method_raises():
+    stat = [{"med": (float(i), float(i))} for i in range(20)]
+    with pytest.raises(ValueError):
+        split_organoids(stat, {"roi": {"split": {"method": "nonsense"}}})

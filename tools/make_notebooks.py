@@ -70,9 +70,10 @@ nb([
 from assembloid_sync import stage_roi, plots
 import matplotlib.pyplot as plt
 F, Fneu, stat = stage_roi.load_plane0(ds)
-idx, xy, labels = stage_roi.split_organoids(stat)
-plots.gmm_scatter(xy, labels, str(ds / "assembloid_demo.jpg"))
-print({0: idx[0].size, 1: idx[1].size})""",
+idx, xy, labels, info = stage_roi.split_organoids(stat, cfg)
+anatomy = stage_roi.load_anatomy(ds)
+plots.split_overlay(xy, labels, str(ds / "assembloid_demo.jpg"), background=anatomy, info=info)
+print({0: idx[0].size, 1: idx[1].size}, info)""",
     """\
 # --- dF/F z-scores + TUNING: look at these histograms, then set amp_min_z /
 # burst_z in <dataset>/assembloid-sync.json, then re-run the FIRST cell and this one ---

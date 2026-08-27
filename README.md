@@ -115,11 +115,14 @@ is being redone and any prior curation decision no longer applies.
 
 ### 5. Analysis — `code` env
 
-**Organoid assignment.** A 2-component Gaussian Mixture (full covariance, 10
+**Organoid assignment.** By default, a 2-component Gaussian Mixture (full covariance, 10
 initializations, fixed seed) clusters ROI centroids into two spatial blobs. Because GMM
 assignment is probabilistic and can misplace ROIs near the boundary, each ROI is then
 reassigned to whichever component it is closer to by **Mahalanobis distance**. Label 0
-is forced to be the upper organoid (smaller mean y).
+is forced to be the upper organoid (smaller mean y). GMM fails silently on fields of
+view it isn't suited to (e.g. a small frame-edge fragment gets absorbed into the main
+body instead of isolated) — that's what `assembloid_demo.jpg` and `roi.split` below are
+for. Full method details: [docs/METHODS.md](docs/METHODS.md).
 
 **ΔF/F and normalization.**
 
@@ -188,7 +191,7 @@ Written into the dataset folder:
 | `corr_full.npy` | correlation matrix over all surviving ROIs |
 | `corr_sampled.npy` | balanced-subsample correlation matrix (the one corrSYN uses) |
 | `correlation.tif` | correlation heatmap, organoid boundary marked |
-| `assembloid_demo.jpg` | ROI centroids colored by organoid assignment |
+| `assembloid_demo.jpg` | ROI centroids colored by organoid assignment, overlaid on the suite2p mean-image anatomy so a wrong split is visible at a glance — check it after every run |
 | `denoised_movie_reconstructed.tif` | CNMF-E reconstruction (float32 BigTIFF) |
 | `caiman/` | per-frame TIFF sequence + `suite2p/plane0/` outputs |
 | `.assembloid-sync/` | pipeline state, per-stage logs |
@@ -240,6 +243,23 @@ suite2p's `fs`, so they cannot drift apart.
 `n_surrogates` 200 · `seed` 0. Tune `amp_min_z`/`burst_z` against the amplitude
 histograms in `notebooks/ROI_analysis.ipynb`, then pin the chosen values in that
 dataset's `assembloid-sync.json`.
+
+### Organoid split override
+
+`roi.split` controls how ROIs get assigned to the two organoids —
+`{ "method": "gmm", "eps": 40, "axis": "x", "threshold": null }` by default. `gmm` is
+correct for fused assembloids (most datasets); `density` is for two spatially separated
+bodies, including a small fragment GMM would otherwise absorb into the main body instead
+of isolating; `axis` is an explicit `x`/`y` pixel cut for the datasets neither automatic
+method gets right. Always check `assembloid_demo.jpg` — the split drawn on the actual
+anatomy — after a run; if it's wrong, pin the right method (and `threshold`, for `axis`)
+in that dataset's `assembloid-sync.json`:
+
+```json
+{ "roi": { "split": { "method": "axis", "axis": "x", "threshold": 111 } } }
+```
+
+Details and the `density_dip` diagnostic: [docs/METHODS.md](docs/METHODS.md).
 
 ---
 
