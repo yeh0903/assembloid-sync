@@ -245,9 +245,13 @@ adding one (confirmed on synthetic data, where the mechanism is unambiguous).
 | IOSI z | 86.7 | 86.4 | 82.6 |
 
 The surrogate null's mean shifts modestly and monotonically in the theoretically
-expected direction across the sweep — 0.1624 → 0.1680 → 0.1734 (shipped → textbook →
-iAAFT) — but that's only a ~13% total change, so the choice of surrogate method is not
-what drives the reported synchrony results.
+expected direction across the sweep. For IOSI, the null dominant-mode strength goes
+0.1624 → 0.1680 → 0.1734 (shipped → textbook → iAAFT); for corrSYN, the null largest
+eigenvalue goes 10.94 → 11.62 → 12.32. Both rise as spectral preservation improves,
+which is what theory predicts: a surrogate with more realistic autocorrelation has
+fewer effective independent samples and so shows more coincidental correlation under
+the null. But the shift is only ~13%, so the choice of surrogate method is not what
+drives the reported synchrony results.
 
 **Cost.** iAAFT's iterative refinement costs ≈2.4 h per dataset at `n_surrogates=200`,
 versus a couple of minutes for the shipped or textbook variant — roughly **25–60×**
