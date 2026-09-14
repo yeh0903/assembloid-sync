@@ -2,5 +2,8 @@
   "_note": "Copy this file to config.local.json (gitignored) and fill in this machine's values. config.local.json overrides defaults.json but is itself overridden by a dataset's own assembloid-sync.json.",
   "data_root": "C:\\path\\to\\your\\datasets",
   "envs": { "caiman": "caiman_env", "suite2p": "suite2p", "code": "code" },
-  "fiji": { "imagej_exe": "C:\\path\\to\\Fiji.app\\ImageJ-win64.exe" }
+  "fiji": { "imagej_exe": "C:\\path\\to\\Fiji.app\\ImageJ-win64.exe" },
+
+  "_scratch_note": "Optional. CNMF-E writes a ~5.7 GB memmap per dataset, then reads it back during the fit. If your data volume is the I/O bottleneck (measure it - a spinning array can sit at >90% busy while an SSD idles), point this at a fast volume. It holds pure scratch that is deleted after every run, so the location cannot affect results. Omit or set null to keep it under <dataset>/.assembloid-sync/.",
+  "denoise": { "scratch_dir": "D:\\fast\\assembloid-sync-scratch" }
 }

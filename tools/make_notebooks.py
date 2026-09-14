@@ -41,7 +41,7 @@ nb([
     """\
 # --- run CNMF-E (identical to the batch stage) ---
 import os
-temp = layout.caiman_temp(ds); temp.mkdir(parents=True, exist_ok=True)
+temp = layout.caiman_temp(ds, cfg); temp.mkdir(parents=True, exist_ok=True)
 os.environ["CAIMAN_TEMP"] = str(temp)
 from assembloid_sync import stage_denoise
 cnm = stage_denoise.fit(ds, cfg)""",

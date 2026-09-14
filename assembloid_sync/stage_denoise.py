@@ -102,10 +102,18 @@ def run(ds, cfg):
     if checkpoint.exists():
         checkpoint.unlink()
     if not cfg.get("keep_temp", False):
-        shutil.rmtree(layout.caiman_temp(ds), ignore_errors=True)
-        if layout.caiman_temp(ds).exists():
-            leftover = sum(p.stat().st_size for p in layout.caiman_temp(ds).rglob("*") if p.is_file())
+        temp = layout.caiman_temp(ds, cfg)
+        shutil.rmtree(temp, ignore_errors=True)
+        if temp.exists():
+            leftover = sum(p.stat().st_size for p in temp.rglob("*") if p.is_file())
             print("[denoise] WARNING: caiman_temp NOT fully removed (%.1f GB leftover, locked files?)"
                   % (leftover / 1024 ** 3))
         else:
-            print("[denoise] cleaned caiman_temp")
+            print("[denoise] cleaned caiman_temp (%s)" % temp)
+            # an off-dataset scratch_dir leaves <scratch>/<dataset>/ behind; drop it if empty
+            try:
+                parent = temp.parent
+                if parent != layout.state_dir(ds) and not any(parent.iterdir()):
+                    parent.rmdir()
+            except OSError:
+                pass

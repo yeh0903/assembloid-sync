@@ -37,7 +37,16 @@ def state_path(ds):
     return state_dir(ds) / "state.json"
 
 
-def caiman_temp(ds):
+def caiman_temp(ds, cfg=None):
+    """Scratch dir for caiman's memmap (~5.7 GB, deleted after every run).
+
+    `denoise.scratch_dir` moves it off the dataset drive - worth doing when the
+    data volume is the bottleneck (a spinning array) and a fast one is idle.
+    Contents are pure scratch, so the location does not affect results.
+    """
+    root = (cfg or {}).get("denoise", {}).get("scratch_dir")
+    if root:
+        return Path(root) / Path(ds).name / "caiman_temp"
     return state_dir(ds) / "caiman_temp"
 
 

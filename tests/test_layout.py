@@ -15,6 +15,19 @@ def test_paths(tmp_path):
     assert layout.logs_dir(ds) == ds / ".assembloid-sync" / "logs"
 
 
+def test_caiman_temp_scratch_dir(tmp_path):
+    """denoise.scratch_dir relocates the memmap; per-dataset subdir keeps runs apart."""
+    ds = tmp_path / "250528_B2_003"
+    assert layout.caiman_temp(ds, {}) == ds / ".assembloid-sync" / "caiman_temp"
+    assert layout.caiman_temp(ds, {"denoise": {}}) == ds / ".assembloid-sync" / "caiman_temp"
+    assert layout.caiman_temp(ds, {"denoise": {"scratch_dir": None}}) == \
+        ds / ".assembloid-sync" / "caiman_temp"
+    cfg = {"denoise": {"scratch_dir": str(tmp_path / "fast")}}
+    assert layout.caiman_temp(ds, cfg) == tmp_path / "fast" / "250528_B2_003" / "caiman_temp"
+    other = tmp_path / "250605_B2_001"
+    assert layout.caiman_temp(other, cfg) != layout.caiman_temp(ds, cfg)
+
+
 def test_is_b3():
     assert layout.is_b3(Path(r"D:\data\250605_B3_000"))
     assert not layout.is_b3(Path(r"D:\data\250528_B2_003"))
